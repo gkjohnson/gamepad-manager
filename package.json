@@ -1,0 +1,24 @@
+{
+	"name": "gamepad-manager",
+	"version": "0.0.0",
+	"description": "Gamepad and WebXR controller input for the browser.",
+	"private": true,
+	"type": "module",
+	"sideEffects": false,
+	"main": "src/index.js",
+	"module": "src/index.js",
+	"scripts": {
+		"start": "vite --config ./vite.config.js",
+		"build-examples": "vite build --config ./vite.config.js",
+		"lint": "eslint ."
+	},
+	"author": "Garrett Johnson <garrett.kjohnson@gmail.com>",
+	"devDependencies": {
+		"@eslint/js": "^9.39.5",
+		"eslint": "^9.39.5",
+		"eslint-config-mdcs": "^5.0.0",
+		"eslint-plugin-jsdoc": "^65.0.1",
+		"globals": "^17.13.0",
+		"vite": "^8.3.2"
+	}
+}
