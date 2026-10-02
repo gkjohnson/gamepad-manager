@@ -14,6 +14,7 @@ import { EventDispatcher } from './EventDispatcher.js';
 
 /**
  * Base class for an input device with named buttons and axes.
+ * @category Supporting
  * @extends EventDispatcher
  */
 export class Controller extends EventDispatcher {

@@ -52,6 +52,7 @@ const _axis = new Vector3();
 
 /**
  * Base class for the 3D controller models.
+ * @category Supporting
  * @extends Group
  */
 export class ControllerModel extends Group {

@@ -94,6 +94,7 @@ const BUTTON_NAMES = {
 
 /**
  * @typedef {Object} GamepadFeatures
+ * @category Supporting
  * @property {string} mapping - `'standard'`, or `''` when the controller isn't recognized.
  * @property {number} buttons - Number of buttons.
  * @property {number} axes - Number of axes.

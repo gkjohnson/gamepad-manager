@@ -64,7 +64,7 @@ export default [
 			},
 		},
 		rules: {
-			'jsdoc/check-tag-names': [ 'error', { definedTags: [ 'warn', 'note', 'section' ] } ],
+			'jsdoc/check-tag-names': [ 'error', { definedTags: [ 'warn', 'note', 'section', 'category' ] } ],
 			'jsdoc/check-types': 'error',
 			'jsdoc/no-undefined-types': 'error',
 			'jsdoc/require-param-type': 'error',

@@ -1,5 +1,6 @@
 /**
  * Minimal event dispatcher, following three.js's `EventDispatcher`.
+ * @category Supporting
  */
 export class EventDispatcher {
 
