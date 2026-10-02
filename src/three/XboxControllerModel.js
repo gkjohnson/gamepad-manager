@@ -2,7 +2,9 @@
 import { Vector3 } from 'three';
 import { ControllerModel } from './ControllerModel.js';
 
+// the model's face is tilted, so its "into the face" and "down toward the grips" aren't axis aligned
 const PRESS = new Vector3( 0, - 0.75, - 0.66 ).normalize();
+const BUMPER = new Vector3( 0, - 0.66, 0.75 ).normalize();
 const TRIGGER = new Vector3( 0, 0, 1 );
 
 /**
@@ -19,10 +21,9 @@ export class XboxControllerModel extends ControllerModel {
 
 		super( scene, {
 			press: PRESS,
-			bumper: PRESS,
+			bumper: BUMPER,
 			trigger: TRIGGER,
 			dpadRocks: true,
-			stickPivotDepth: 0.026,
 		} );
 
 	}

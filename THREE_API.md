@@ -9,7 +9,8 @@ A 3D controller whose buttons, triggers, d-pad and sticks move to show a control
 a loaded model with a node per moving part, named by position: `button_south`, `button_east`,
 `button_west`, `button_north`, `button_select`, `button_start`, `button_home`, `bumper_left` /
 `right`, `trigger_left` / `right`, `stick_left` / `right` and `dpad`, or `dpad_up` / `down` /
-`left` / `right`. Use a subclass for a specific controller model.
+`left` / `right`. Sticks tilt about their node's origin, which should be the center of the ball at
+their base. Use a subclass for a specific controller model.
 
 
 ### .constructor
@@ -123,12 +124,3 @@ dpadRocks: boolean
 
 Whether the d-pad is one piece that rocks toward the pressed
 direction ( a `dpad` part ) rather than four separate buttons ( `dpad_up` and so on ).
-
-### .stickPivotDepth
-
-```js
-stickPivotDepth: number
-```
-
-How far into the controller below a stick's center it tilts
-about.

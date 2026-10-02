@@ -13,41 +13,22 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { ControllerManager } from '../src/index.js';
 import { DualShockControllerModel, XboxControllerModel } from '../src/three/index.js';
 
-// the model shown for each controller brand, with the Xbox model for anything else
+// the model shown for each controller brand, with the Xbox model for anything else, and how far to
+// tip it to show its top edge while the bumpers or triggers are in use
 const MODELS = {
-	xbox: { url: './models/xbox-controller.glb', ModelClass: XboxControllerModel },
-	playstation: { url: './models/dualshock-controller.glb', ModelClass: DualShockControllerModel },
+	xbox: { url: './models/xbox-controller.glb', ModelClass: XboxControllerModel, topAngle: 1.2 },
+	playstation: { url: './models/dualshock-controller.glb', ModelClass: DualShockControllerModel, topAngle: 0.6 },
 };
 
 // how much the pushes tilt the controller
 const TILT = 0.1;
 
-// while no gamepad is connected, a random button or stick is pushed every interval, in seconds
-const RANDOM_INTERVAL = 1.2;
-const RANDOM_HOLD = 0.5;
-const RANDOM_BUTTONS = [
-	'south', 'east', 'west', 'north', 'select', 'start', 'home',
-	'left-stick', 'right-stick', 'left-bumper', 'right-bumper', 'left-trigger', 'right-trigger',
-	'dpad-up', 'dpad-down', 'dpad-left', 'dpad-right',
-];
-const RANDOM_STICKS = [
-	{ x: 'left-x', y: 'left-y' },
-	{ x: 'right-x', y: 'right-y' },
-];
-const RANDOM_NAMES = [ ...RANDOM_BUTTONS, ...RANDOM_STICKS.flatMap( s => [ s.x, s.y ] ) ];
-
-// stands in for a gamepad, easing each value toward its target so presses look smooth
-const randomInput = {
-	values: {},
-	targets: {},
-	nextPress: 0,
-	release: 0,
-	getAxis( name ) {
-
-		return this.values[ name ] || 0;
-
-	},
-};
+// the bumpers and triggers, how long after they're let go, in seconds, the view tips back, and how
+// quickly it tips toward the top and back to the front
+const SHOULDER_BUTTONS = [ 'left-bumper', 'right-bumper', 'left-trigger', 'right-trigger' ];
+const SHOULDER_HOLD = 1;
+const TIP_SPEED = 4;
+const RETURN_SPEED = 1.2;
 
 const _torque = new Vector3();
 const _tilt = new Vector3();
@@ -76,6 +57,7 @@ scene.add( sway );
 const timer = new Timer();
 const status = document.getElementById( 'status' );
 const manager = new ControllerManager();
+window.manager = manager;
 manager.addEventListener( 'connected', e => {
 
 	if ( e.slot !== 0 ) return;
@@ -93,12 +75,15 @@ manager.addEventListener( 'disconnected', e => {
 // load and show a controller model, keeping each loaded model to switch back to
 let model = null;
 let shownBrand = null;
+let topAngle = 0;
+let lastShoulderTime = - Infinity;
 const loaded = {};
-showModel( 'xbox' );
+const DEFAULT_BRAND = 'xbox';
+showModel( DEFAULT_BRAND );
 
 function showModel( brand ) {
 
-	brand = brand in MODELS ? brand : 'xbox';
+	brand = brand in MODELS ? brand : DEFAULT_BRAND;
 	shownBrand = brand;
 	if ( ! loaded[ brand ] ) {
 
@@ -131,13 +116,18 @@ function animate( timestamp ) {
 
 	const delta = timer.getDelta();
 	const time = timer.getElapsed();
-	updateRandomInput( time, delta );
+	const pad = manager.getController( 0 );
+	if ( model && pad ) {
 
-	if ( model ) {
+		// show the gamepad in slot 0, which reads as released once disconnected
+		model.setFromController( pad );
 
-		// show the gamepad in slot 0, or the random input if none is connected
-		const pad = manager.getController( 0 );
-		model.setFromController( pad && pad.connected ? pad : randomInput );
+		// note when the bumpers or triggers were last in use
+		for ( let i = 0, l = SHOULDER_BUTTONS.length; i < l; i ++ ) {
+
+			if ( pad.getAxis( SHOULDER_BUTTONS[ i ] ) > 0.05 ) lastShoulderTime = time;
+
+		}
 
 		// ease toward the tilt from the current pushes, the same at any frame rate
 		_tilt.lerp( model.getTilt( _torque ), 1 - Math.exp( - 12 * delta ) );
@@ -155,50 +145,17 @@ function animate( timestamp ) {
 
 	}
 
+	// tip the controller to show its top while the bumpers or triggers are in use, easing slowly back
+	// to the front view a moment after they're let go
+	const topTarget = model && time - lastShoulderTime < SHOULDER_HOLD ? MODELS[ shownBrand ].topAngle : 0;
+	const speed = topTarget > topAngle ? TIP_SPEED : RETURN_SPEED;
+	topAngle += ( topTarget - topAngle ) * ( 1 - Math.exp( - speed * delta ) );
+
 	sway.rotation.y = 0.25 * Math.sin( time * 0.5 );
-	sway.rotation.x = 0.08 * Math.sin( time * 0.7 );
+	sway.rotation.x = topAngle + 0.08 * Math.sin( time * 0.7 );
 	sway.position.y = 0.02 * Math.sin( time );
 
 	renderer.render( scene, camera );
-
-}
-
-// presses a random button or pushes a random stick each interval, then lets go
-function updateRandomInput( time, delta ) {
-
-	const { values, targets } = randomInput;
-	if ( time > randomInput.nextPress ) {
-
-		randomInput.nextPress = time + RANDOM_INTERVAL;
-		randomInput.release = time + RANDOM_HOLD;
-
-		const index = Math.floor( Math.random() * ( RANDOM_BUTTONS.length + RANDOM_STICKS.length ) );
-		if ( index < RANDOM_BUTTONS.length ) {
-
-			targets[ RANDOM_BUTTONS[ index ] ] = 1;
-
-		} else {
-
-			const { x, y } = RANDOM_STICKS[ index - RANDOM_BUTTONS.length ];
-			const angle = Math.random() * 2 * Math.PI;
-			targets[ x ] = Math.cos( angle );
-			targets[ y ] = Math.sin( angle );
-
-		}
-
-	}
-
-	const ease = 1 - Math.exp( - 15 * delta );
-	const released = time > randomInput.release;
-	for ( let i = 0, l = RANDOM_NAMES.length; i < l; i ++ ) {
-
-		const name = RANDOM_NAMES[ i ];
-		if ( released ) targets[ name ] = 0;
-
-		const value = values[ name ] || 0;
-		values[ name ] = value + ( ( targets[ name ] || 0 ) - value ) * ease;
-
-	}
 
 }
 

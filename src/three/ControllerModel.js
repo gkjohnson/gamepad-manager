@@ -58,8 +58,6 @@ const _axis = new Vector3();
  * Triggers themselves swing about their top front edge.
  * @property {boolean} dpadRocks - Whether the d-pad is one piece that rocks toward the pressed
  * direction ( a `dpad` part ) rather than four separate buttons ( `dpad_up` and so on ).
- * @property {number} stickPivotDepth - How far into the controller below a stick's center it tilts
- * about.
  */
 
 /**
@@ -67,7 +65,8 @@ const _axis = new Vector3();
  * a loaded model with a node per moving part, named by position: `button_south`, `button_east`,
  * `button_west`, `button_north`, `button_select`, `button_start`, `button_home`, `bumper_left` /
  * `right`, `trigger_left` / `right`, `stick_left` / `right` and `dpad`, or `dpad_up` / `down` /
- * `left` / `right`. Use a subclass for a specific controller model.
+ * `left` / `right`. Sticks tilt about their node's origin, which should be the center of the ball at
+ * their base. Use a subclass for a specific controller model.
  * @extends Group
  */
 export class ControllerModel extends Group {
@@ -80,7 +79,7 @@ export class ControllerModel extends Group {
 
 		super();
 
-		const { press, bumper, trigger, dpadRocks, stickPivotDepth } = settings;
+		const { press, bumper, trigger, dpadRocks } = settings;
 		this.add( scene );
 
 		this._values = {};
@@ -91,22 +90,15 @@ export class ControllerModel extends Group {
 		this._left = new Vector3( - 1, 0, 0 );
 		this._down = new Vector3().crossVectors( press, this._right );
 
-		// sticks tilt as one piece about a point below their center, inside a pivot that also moves
-		// when the stick is pressed
+		// sticks tilt about their node's origin, the center of the ball at their base
 		const pivots = {};
 		for ( const { x, y, part: partName, button } of STICKS ) {
 
 			const stick = scene.getObjectByName( partName );
 			if ( ! stick ) continue;
 
-			const pivot = new Group();
-			pivot.position.copy( stick.position ).addScaledVector( press, stickPivotDepth );
-			stick.parent.add( pivot );
-			pivot.add( stick );
-			stick.position.sub( pivot.position );
-
-			pivots[ button ] = pivot;
-			this._sticks.push( { x, y, pivot, rest: pivot.position.clone() } );
+			pivots[ button ] = stick;
+			this._sticks.push( { x, y, pivot: stick, rest: stick.position.clone() } );
 
 		}
 

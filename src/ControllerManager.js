@@ -5,6 +5,10 @@ import { MouseController } from './MouseController.js';
 
 const _empty = [];
 
+// how long, in milliseconds, a new gamepad matching a connected controller waits for that controller
+// to disconnect before it's taken to be a second controller of the same model
+const RECONNECT_WINDOW = 1000;
+
 /**
  * Fired during `update` when a gamepad connects. The event object is reused, so copy any fields to
  * keep.
@@ -26,8 +30,10 @@ const _empty = [];
  * `update` once per frame to read every device's latest state.
  *
  * A connected gamepad never changes slot. A newly connected one takes a free slot that last held
- * the same model if there is one, so a controller that's unplugged and plugged back in usually
- * returns to its slot, and otherwise the lowest free slot.
+ * the same model if there is one, so a controller that's unplugged and plugged back in returns to
+ * its slot, and otherwise the lowest free slot. Browsers can report a plugged back in controller
+ * before dropping its old entry, so a new gamepad of the same model as a connected one waits up to a
+ * second for that one to disconnect before getting a slot of its own.
  *
  * @note Browsers don't expose a gamepad until a button is pressed on it.
  * @extends EventDispatcher
@@ -47,6 +53,7 @@ export class ControllerManager extends EventDispatcher {
 
 		this._keyboard = null;
 		this._mouse = null;
+		this._pending = new Map();
 		this._event = { type: '', controller: null, slot: - 1, target: null };
 
 	}
@@ -110,11 +117,34 @@ export class ControllerManager extends EventDispatcher {
 
 		}
 
+		// forget waiting gamepads that have gone
+		const pending = this._pending;
+		if ( pending.size > 0 ) {
+
+			for ( const index of pending.keys() ) {
+
+				if ( ! gamepads[ index ] || ! gamepads[ index ].connected ) pending.delete( index );
+
+			}
+
+		}
+
+		const now = performance.now();
 		for ( let i = 0, l = gamepads.length; i < l; i ++ ) {
 
 			const gamepad = gamepads[ i ];
 			if ( ! gamepad || ! gamepad.connected || this._isTracked( gamepad.index ) ) continue;
 
+			// a gamepad of the same model as a connected controller may be that controller plugged
+			// back in before the browser drops its old entry, so it waits for that one to disconnect
+			if ( this._isModelConnected( gamepad.id ) ) {
+
+				if ( ! pending.has( gamepad.index ) ) pending.set( gamepad.index, now );
+				if ( now - pending.get( gamepad.index ) < RECONNECT_WINDOW ) continue;
+
+			}
+
+			pending.delete( gamepad.index );
 			const slot = this._findSlot( gamepad.id );
 			const controller = controllers[ slot ];
 			controller.connect( gamepad );
@@ -150,6 +180,19 @@ export class ControllerManager extends EventDispatcher {
 		for ( let i = 0, l = controllers.length; i < l; i ++ ) {
 
 			if ( controllers[ i ].connected && controllers[ i ].index === index ) return true;
+
+		}
+
+		return false;
+
+	}
+
+	_isModelConnected( id ) {
+
+		const { controllers } = this;
+		for ( let i = 0, l = controllers.length; i < l; i ++ ) {
+
+			if ( controllers[ i ].connected && controllers[ i ].id === id ) return true;
 
 		}
 

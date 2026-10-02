@@ -23,7 +23,6 @@ export class DualShockControllerModel extends ControllerModel {
 			bumper: BUMPER,
 			trigger: TRIGGER,
 			dpadRocks: false,
-			stickPivotDepth: 0.03,
 		} );
 
 	}

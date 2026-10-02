@@ -52,8 +52,10 @@ Tracks connected gamepads in stable slots and gives access to the keyboard and m
 `update` once per frame to read every device's latest state.
 
 A connected gamepad never changes slot. A newly connected one takes a free slot that last held
-the same model if there is one, so a controller that's unplugged and plugged back in usually
-returns to its slot, and otherwise the lowest free slot.
+the same model if there is one, so a controller that's unplugged and plugged back in returns to
+its slot, and otherwise the lowest free slot. Browsers can report a plugged back in controller
+before dropping its old entry, so a new gamepad of the same model as a connected one waits up to a
+second for that one to disconnect before getting a slot of its own.
 
 > [!NOTE]
 > Browsers don't expose a gamepad until a button is pressed on it.
