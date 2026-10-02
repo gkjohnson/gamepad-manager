@@ -37,7 +37,7 @@ manager.getMouse().getButtonPressed( 'left' );
 
 - **Buttons named by position**, not brand letters. Face buttons are `south`, `east`, `west`, `north` ( A, B, X, Y on Xbox; Nintendo prints A and B the other way around ), then `left-bumper`, `right-bumper`, `left-trigger`, `right-trigger`, `select`, `start`, `left-stick`, `right-stick`, `dpad-up` / `down` / `left` / `right`, `home`. Axes `left-x`, `left-y`, `right-x`, `right-y`. These are the browser's `'standard'` mapping positions; the API exposes only numbered buttons and a model id string, no names.
 - **Unrecognized controllers** ( `mapping === ''` ) get `button-0`, `axis-0` and so on.
-- **Stable slots.** A connected gamepad never moves. A new one takes a free slot that last held the same model, else the lowest free slot. The browser gives only a model id, no serial, so identical controllers can't be told apart. Controllers stay in their slot after disconnecting ( `connected` false ), so references stay valid and are reused on reconnect. Browsers can list a plugged back in controller at a new index before dropping its old entry, which put the reconnect in a second slot; a new gamepad of the same model as a connected one now waits up to a second ( `RECONNECT_WINDOW` ) for that one to disconnect, so a second identical controller registers a second late.
+- **Stable slots.** A connected gamepad never moves. A new one takes a free slot that last held the same model, else the lowest free slot. The browser gives only a model id, no serial, so identical controllers can't be told apart. Controllers stay in their slot after disconnecting ( `connected` false ), so references stay valid and are reused on reconnect. Browsers can list a plugged back in controller at a new index before dropping its old entry, which put the reconnect in a second slot; a new gamepad of the same model as a connected one now waits up to a second ( `RECONNECT_WINDOW` ) for that one to disconnect, so a second identical controller registers a second late. `reassignSlots()` drops disconnected controllers and fills the slots from 0, for when the app wants to reshuffle, like a start screen where players are connecting. A controller's `id` is only its model, and can differ for the same controller over USB and Bluetooth.
 - **Buttons are binary.** Held, pressed and released ( the latter two per update ) are the only button queries. How far an analog button is pressed is read with `getAxis( buttonName )`, 0 to 1. An analog button counts as held above `pressThreshold` ( 0.5 ) and stays held until below `releaseThreshold` ( 0.4 ), so triggers don't flicker. Axes are values only.
 - **Dead zones** rescale so values ramp from 0 at the dead zone's edge. Sticks use one radial dead zone over x and y.
 - **Keyboard** buttons are `KeyboardEvent.code` names ( `KeyW`, `Space` ), the physical position. **Mouse** buttons are `left`, `middle`, `right`, `back`, `forward`. A tap between two updates still reads as pressed for one update. Key repeat is ignored, and everything releases on window blur.
@@ -70,7 +70,7 @@ Start with the main controllers: Xbox and XInput pads, recent PlayStation pads a
 
 ## Controller models
 
-Both are CC BY 4.0 and credited in the README. The credit for any model shown must stay visible wherever the demo is hosted ( `example/index.html` credits both ). Both name their moving parts the same way, by position: `button_south` / `east` / `west` / `north`, `button_select`, `button_start`, `button_home`, `bumper_left` / `right`, `trigger_left` / `right`, `stick_left` / `right` ( one node each ), and `dpad` or `dpad_up` / `down` / `left` / `right`. Each has its pivot at its center.
+Both are CC BY 4.0 and credited in the README. Both name their moving parts the same way, by position: `button_south` / `east` / `west` / `north`, `button_select`, `button_start`, `button_home`, `bumper_left` / `right`, `trigger_left` / `right`, `stick_left` / `right` ( one node each ), and `dpad` or `dpad_up` / `down` / `left` / `right`. Each has its pivot at its center. Both lie face up, the sticks along +y and the top edge toward -z, so the model classes share the same directions; the demo stands them up toward the camera.
 
 ### Xbox
 
@@ -81,7 +81,7 @@ Both are CC BY 4.0 and credited in the README. The credit for any model shown mu
 - Pieces were found as connected parts of the mesh. The bumpers and triggers only touch the body along texture seams, so they were cut out separately.
 - Compressed with gltf-transform: `metalrough` ( the download used the old specular-glossiness material, which three.js no longer supports ), `prune`, `dedup`, `quantize`, `webp`. No Draco or meshopt.
 - The split and naming script is not in the repo. It was a one-off; redo it from this description if the model needs rebuilding.
-- The face points along ( 0, 0.75, 0.66 ) in model space; `XboxControllerModel` presses buttons along the opposite direction.
+- Turned so the sticks point along +y.
 
 ### DualShock 4
 
@@ -89,6 +89,6 @@ Both are CC BY 4.0 and credited in the README. The credit for any model shown mu
 
 - Source: [DualShock 4 PlayStation Controller](https://sketchfab.com/3d-models/dualshock-4-playstation-controller-e3c2f0dc16524fc19cdde45bad1de1a9) by [shaielwolf](https://sketchfab.com/shaielwolf).
 - The download has 8 meshes ( front and back shells, touchpad, joysticks, buttons, triggers, headphone jack, screws and USB ), each already split into separate pieces. Moving parts became their own nodes, named by position, with pivots at their centers: `button_south` / `east` / `west` / `north`, `button_select` ( Share ), `button_start` ( Options ), `button_home` ( PS ), `dpad_up` / `down` / `left` / `right` ( separate arrows ), `stick_left` / `right` ( one piece each ), `bumper_left` / `right`, `trigger_left` / `right`, `touchpad`. The static pieces of each mesh merged into `body_front`, `body_back`, `shoulder_strips` ( the strip between each bumper and trigger, which isn't part of either ), `headphone_jack` and `screws_usb`.
-- Centered, scaled to the Xbox model's width ( 0.824 ) and leaned back to the Xbox model's angle, its face along ( 0, 0.75, 0.66 ).
+- Centered, scaled to the Xbox model's width ( 0.824 ) and turned so the sticks point along +y.
 - Compressed with gltf-transform: `prune`, `dedup`, `resize` ( 4096 textures to 1024 ), `quantize`, `webp`. Only the first UV set kept. No Draco or meshopt.
 - Like the Xbox model, the processing script is not in the repo.

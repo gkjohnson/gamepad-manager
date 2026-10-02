@@ -9,8 +9,9 @@ A 3D controller whose buttons, triggers, d-pad and sticks move to show a control
 a loaded model with a node per moving part, named by position: `button_south`, `button_east`,
 `button_west`, `button_north`, `button_select`, `button_start`, `button_home`, `bumper_left` /
 `right`, `trigger_left` / `right`, `stick_left` / `right` and `dpad`, or `dpad_up` / `down` /
-`left` / `right`. Sticks tilt about their node's origin, which should be the center of the ball at
-their base. Use a subclass for a specific controller model.
+`left` / `right`. The model lies face up, its sticks along +y and its top edge toward -z. Sticks
+tilt about their node's origin, which should be the center of the ball at their base. Use a
+subclass for a specific controller model.
 
 
 ### .constructor

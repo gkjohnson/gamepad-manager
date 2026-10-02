@@ -121,6 +121,16 @@ update(): void
 Detects gamepads connecting and disconnecting, and updates every device. Call once per frame.
 
 
+### .reassignSlots
+
+```js
+reassignSlots(): void
+```
+
+Removes disconnected gamepads and moves connected ones down, in order, to fill the slots from
+0. A gamepad plugged back in after this no longer returns to the slot it left.
+
+
 ### .dispose
 
 ```js

@@ -2,7 +2,7 @@
 
 Gamepad, keyboard and mouse input for browser games, with one query and event API across devices.
 
-- Gamepads stay in stable slots as controllers connect and disconnect.
+- Gamepads stay in stable slots as controllers connect and disconnect, until reassigned to fill the slots from 0.
 - Buttons are named by position ( `south`, `left-trigger`, ... ), the same on Xbox, PlayStation and Switch controllers.
 - Radial stick dead zones, and press and release thresholds so analog triggers don't flicker.
 - Query state each frame or listen for `pressed` / `released` events, with no allocations per frame.
@@ -10,7 +10,7 @@ Gamepad, keyboard and mouse input for browser games, with one query and event AP
 
 # Examples
 
-`example/` shows the controller model matching the gamepad in slot 0, its buttons, triggers and sticks following the gamepad and tilting it slightly as they're pushed.
+`example/` shows a controller model for each connected gamepad, up to four, its buttons, triggers and sticks following the gamepad and tilting it slightly as they're pushed. The up and down arrow keys add and remove dummy controllers.
 
 # Use
 

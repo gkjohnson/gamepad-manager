@@ -165,6 +165,24 @@ export class ControllerManager extends EventDispatcher {
 	}
 
 	/**
+	 * Removes disconnected gamepads and moves connected ones down, in order, to fill the slots from
+	 * 0. A gamepad plugged back in after this no longer returns to the slot it left.
+	 */
+	reassignSlots() {
+
+		const { controllers } = this;
+		let slot = 0;
+		for ( let i = 0, l = controllers.length; i < l; i ++ ) {
+
+			if ( controllers[ i ].connected ) controllers[ slot ++ ] = controllers[ i ];
+
+		}
+
+		controllers.length = slot;
+
+	}
+
+	/**
 	 * Removes the keyboard and mouse event listeners.
 	 */
 	dispose() {

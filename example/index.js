@@ -1,5 +1,4 @@
 import {
-	Color,
 	Group,
 	Mesh,
 	MeshBasicMaterial,
@@ -37,6 +36,9 @@ const DOT_UNLIT = new MeshBasicMaterial( { color: 0x3a3f44 } );
 const DOT_SPACING = 0.022;
 const DOTS_BELOW = 0.34;
 
+// how far the face up models are stood up toward the camera, in radians
+const STAND_ANGLE = 0.95;
+
 // how much the pushes tilt a controller
 const TILT = 0.1;
 
@@ -62,19 +64,17 @@ const EXIT_TIME = 0.4;
 const _torque = new Vector3();
 const _axis = new Vector3();
 
-// camera
+// camera, facing the controllers head on
 const camera = new PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 100 );
-camera.position.set( 0, 0.35, 1.2 );
-camera.lookAt( 0, 0, 0 );
+camera.position.set( 0, 0, 1.25 );
 
-// renderer
-const renderer = new WebGLRenderer( { antialias: true } );
+// renderer, transparent over the page
+const renderer = new WebGLRenderer( { antialias: true, alpha: true } );
 renderer.setAnimationLoop( animate );
 document.body.appendChild( renderer.domElement );
 
 // scene
 const scene = new Scene();
-scene.background = new Color( 0x131619 );
 scene.environment = new PMREMGenerator( renderer ).fromScene( new RoomEnvironment() ).texture;
 
 // all the controllers, scaled together to fit the view
@@ -131,8 +131,13 @@ function addDisplay( controller, brand ) {
 
 	loadModel( brand ).then( model => {
 
+		// the models lie face up, so stand each up toward the camera
+		const stand = new Group();
+		stand.rotation.x = STAND_ANGLE;
+		stand.add( model );
+
 		display.model = model;
-		display.group.add( model );
+		display.group.add( stand );
 
 	} );
 
@@ -255,7 +260,7 @@ function animate( timestamp ) {
 	const shownCount = countShown();
 	if ( shownCount !== lastShownCount ) {
 
-		status.textContent = shownCount === 0 ? 'Plug in a controller and press a button' : '';
+		status.style.opacity = shownCount === 0 ? 1 : 0;
 		lastShownCount = shownCount;
 
 	}

@@ -65,8 +65,9 @@ const _axis = new Vector3();
  * a loaded model with a node per moving part, named by position: `button_south`, `button_east`,
  * `button_west`, `button_north`, `button_select`, `button_start`, `button_home`, `bumper_left` /
  * `right`, `trigger_left` / `right`, `stick_left` / `right` and `dpad`, or `dpad_up` / `down` /
- * `left` / `right`. Sticks tilt about their node's origin, which should be the center of the ball at
- * their base. Use a subclass for a specific controller model.
+ * `left` / `right`. The model lies face up, its sticks along +y and its top edge toward -z. Sticks
+ * tilt about their node's origin, which should be the center of the ball at their base. Use a
+ * subclass for a specific controller model.
  * @extends Group
  */
 export class ControllerModel extends Group {
@@ -102,7 +103,8 @@ export class ControllerModel extends Group {
 
 		}
 
-		// triggers swing about a hinge along their top front edge
+		// triggers swing about a hinge along their top front edge, on the face side ( +y ) toward the
+		// top ( -z )
 		scene.updateMatrixWorld( true );
 		for ( const [ name, partName ] of TRIGGERS ) {
 
@@ -110,7 +112,7 @@ export class ControllerModel extends Group {
 			if ( ! triggerPart ) continue;
 
 			_box.setFromObject( triggerPart );
-			_hinge.set( ( _box.min.x + _box.max.x ) / 2, _box.max.y, _box.max.z );
+			_hinge.set( ( _box.min.x + _box.max.x ) / 2, _box.max.y, _box.min.z );
 			triggerPart.parent.worldToLocal( _hinge );
 
 			const pivot = new Group();
