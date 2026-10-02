@@ -1,7 +1,7 @@
 {
 	"name": "gamepad-manager",
 	"version": "0.0.0",
-	"description": "Gamepad and WebXR controller input for the browser.",
+	"description": "Gamepad, keyboard and mouse input for the browser.",
 	"private": true,
 	"type": "module",
 	"sideEffects": false,
@@ -19,6 +19,8 @@
 		"eslint-config-mdcs": "^5.0.0",
 		"eslint-plugin-jsdoc": "^65.0.1",
 		"globals": "^17.13.0",
+		"jsdoc": "^4.0.5",
+		"three": "^0.186.1",
 		"vite": "^8.3.2"
 	}
 }

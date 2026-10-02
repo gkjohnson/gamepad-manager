@@ -4,8 +4,45 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>gamepad-manager</title>
+		<style>
+
+			body {
+				margin: 0;
+				overflow: hidden;
+				background: #131619;
+				font-family: sans-serif;
+			}
+
+			#credits {
+				position: absolute;
+				left: 12px;
+				bottom: 10px;
+				font-size: 12px;
+				color: #8a9096;
+			}
+
+			#credits a {
+				color: inherit;
+			}
+
+			#status {
+				position: absolute;
+				top: 16px;
+				width: 100%;
+				text-align: center;
+				font-size: 14px;
+				color: #c8ccd0;
+			}
+
+		</style>
 	</head>
 	<body>
+		<div id="status">Press a button on a controller</div>
+		<div id="credits">
+			<a href="https://sketchfab.com/3d-models/xbox-inalambric-controller-white-f18a70fc10414ef5a39b55de68f12823">Xbox Inalambric Controller (White)</a>
+			by <a href="https://sketchfab.com/oscar.lopez.riviello">Chistodrako._.</a>,
+			<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>
+		</div>
 		<script type="module" src="./index.js"></script>
 	</body>
 </html>
