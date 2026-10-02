@@ -6,10 +6,11 @@ Gamepad, keyboard and mouse input for browser games, with one query and event AP
 - Buttons are named by position ( `south`, `left-trigger`, ... ), the same on Xbox, PlayStation and Switch controllers.
 - Radial stick dead zones, and press and release thresholds so analog triggers don't flicker.
 - Query state each frame or listen for `pressed` / `released` events, with no allocations per frame.
+- Optional three.js controller models whose buttons and sticks move with a controller's state.
 
 # Examples
 
-`example/` shows a controller model whose buttons, triggers and sticks follow the gamepad in slot 0, tilting slightly as they're pushed.
+`example/` shows the controller model matching the gamepad in slot 0, its buttons, triggers and sticks following the gamepad and tilting it slightly as they're pushed.
 
 # Use
 
@@ -64,9 +65,24 @@ Axes are `left-x`, `left-y`, `right-x` and `right-y`, from -1 to 1. Unrecognized
 
 The keyboard uses `KeyboardEvent.code` names ( `KeyW`, `Space`, `ArrowUp` ), and the mouse `left`, `middle`, `right`, `back` and `forward`.
 
+## Controller models
+
+`gamepad-manager/three` has three.js models that show a controller's state, for the models in `example/models/`. A gamepad's `brand` ( `'xbox'`, `'playstation'`, `'switch'` or `''` ) picks the one to show:
+
+```js
+import { DualShockControllerModel, XboxControllerModel } from 'gamepad-manager/three';
+
+const gltf = await new GLTFLoader().loadAsync( pad.brand === 'playstation' ? DUALSHOCK_URL : XBOX_URL );
+const model = pad.brand === 'playstation' ? new DualShockControllerModel( gltf.scene ) : new XboxControllerModel( gltf.scene );
+scene.add( model );
+
+// each frame
+model.setFromController( pad );
+```
+
 # API
 
-See [API.md](./API.md).
+See [API.md](./API.md), and [THREE_API.md](./THREE_API.md) for the models.
 
 # Development
 
@@ -75,8 +91,11 @@ npm install
 npm start
 ```
 
-`npm start` serves the pages in `example/`, and `npm run lint` checks the code. `API.md` is generated from the JSDoc with [jsdoc2md](https://github.com/gkjohnson/jsdoc2md) and the settings in `jsdoc2md.config.js`.
+`npm start` serves the pages in `example/`, and `npm run lint` checks the code. `API.md` and `THREE_API.md` are generated from the JSDoc with [jsdoc2md](https://github.com/gkjohnson/jsdoc2md) and the settings in `jsdoc2md.config.js`.
 
 # Credits
 
-Controller model in the example: [Xbox Inalambric Controller (White)](https://sketchfab.com/3d-models/xbox-inalambric-controller-white-f18a70fc10414ef5a39b55de68f12823) by Chistodrako._., [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+Controller models in `example/models/`, both [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) and modified ( split into separate parts and compressed ):
+
+- `xbox-controller.glb`: [Xbox Inalambric Controller (White)](https://sketchfab.com/3d-models/xbox-inalambric-controller-white-f18a70fc10414ef5a39b55de68f12823) by [Chistodrako._.](https://sketchfab.com/oscar.lopez.riviello)
+- `dualshock-controller.glb`: [DualShock 4 PlayStation Controller](https://sketchfab.com/3d-models/dualshock-4-playstation-controller-e3c2f0dc16524fc19cdde45bad1de1a9) by [shaielwolf](https://sketchfab.com/shaielwolf)

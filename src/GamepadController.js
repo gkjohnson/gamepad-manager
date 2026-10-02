@@ -10,6 +10,13 @@ const STANDARD_BUTTONS = [
 ];
 const STANDARD_AXES = [ 'left-x', 'left-y', 'right-x', 'right-y' ];
 
+// brands by their USB vendor id or name in the browser's gamepad id, which varies by browser
+const BRANDS = [
+	[ 'xbox', /045e|xbox|xinput/i ],
+	[ 'playstation', /054c|playstation|dualshock|dualsense/i ],
+	[ 'switch', /057e|nintendo|pro controller|joy-con/i ],
+];
+
 /**
  * @typedef {Object} GamepadFeatures
  * @property {string} mapping - The browser's mapping: `'standard'`, or `''` when the controller
@@ -53,6 +60,13 @@ export class GamepadController extends Controller {
 		this.id = '';
 
 		/**
+		 * The controller's brand, guessed from `id`: `'xbox'`, `'playstation'`, `'switch'`, or `''`
+		 * when unknown. Many third-party controllers report themselves as Xbox controllers.
+		 * @type {string}
+		 */
+		this.brand = '';
+
+		/**
 		 * The browser's index for the connected gamepad, or -1.
 		 * @type {number}
 		 */
@@ -86,6 +100,18 @@ export class GamepadController extends Controller {
 
 		const { features } = this;
 		this.id = gamepad.id;
+		this.brand = '';
+		for ( const [ brand, pattern ] of BRANDS ) {
+
+			if ( pattern.test( gamepad.id ) ) {
+
+				this.brand = brand;
+				break;
+
+			}
+
+		}
+
 		this.index = gamepad.index;
 		this.connected = true;
 		features.mapping = gamepad.mapping;

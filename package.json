@@ -7,6 +7,10 @@
 	"sideEffects": false,
 	"main": "src/index.js",
 	"module": "src/index.js",
+	"exports": {
+		".": "./src/index.js",
+		"./three": "./src/three/index.js"
+	},
 	"scripts": {
 		"start": "vite --config ./vite.config.js",
 		"build-examples": "vite build --config ./vite.config.js",
@@ -22,5 +26,13 @@
 		"jsdoc": "^4.0.5",
 		"three": "^0.186.1",
 		"vite": "^8.3.2"
+	},
+	"peerDependencies": {
+		"three": ">=0.150.0"
+	},
+	"peerDependenciesMeta": {
+		"three": {
+			"optional": true
+		}
 	}
 }

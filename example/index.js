@@ -11,49 +11,44 @@ import {
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { ControllerManager } from '../src/index.js';
+import { DualShockControllerModel, XboxControllerModel } from '../src/three/index.js';
 
-const URL = './models/xbox-controller.glb';
+// the model shown for each controller brand, with the Xbox model for anything else
+const MODELS = {
+	xbox: { url: './models/xbox-controller.glb', ModelClass: XboxControllerModel },
+	playstation: { url: './models/dualshock-controller.glb', ModelClass: DualShockControllerModel },
+};
 
-// how far parts move when pressed, and how much each press tilts the controller
-const PRESS_DEPTH = 0.006;
-const TRIGGER_DEPTH = 0.02;
-const STICK_TRAVEL = 0.015;
-const TILT = 0.2;
+// how much the pushes tilt the controller
+const TILT = 0.1;
 
-// directions in the model: into its face, right and down along the face, and back toward the grips
-const IN = new Vector3( 0, - 0.75, - 0.66 ).normalize();
-const RIGHT = new Vector3( 1, 0, 0 );
-const DOWN = new Vector3().crossVectors( IN, RIGHT );
-const PULL = new Vector3( 0, 0, 1 );
-
-// gamepad buttons and the model parts they move
-const LEFT_STICK = [ 'stick_left_cap', 'stick_left_ring', 'stick_left_base' ];
-const RIGHT_STICK = [ 'stick_right_cap', 'stick_right_ring', 'stick_right_base' ];
-const BUTTONS = [
-	{ name: 'south', parts: [ 'button_a' ] },
-	{ name: 'east', parts: [ 'button_b' ] },
-	{ name: 'west', parts: [ 'button_x' ] },
-	{ name: 'north', parts: [ 'button_y' ] },
-	{ name: 'select', parts: [ 'button_view' ] },
-	{ name: 'start', parts: [ 'button_menu' ] },
-	{ name: 'home', parts: [ 'button_guide', 'guide_logo' ] },
-	{ name: 'dpad-up', parts: [ 'dpad' ] },
-	{ name: 'dpad-down', parts: [ 'dpad' ] },
-	{ name: 'dpad-left', parts: [ 'dpad' ] },
-	{ name: 'dpad-right', parts: [ 'dpad' ] },
-	{ name: 'left-stick', parts: LEFT_STICK },
-	{ name: 'right-stick', parts: RIGHT_STICK },
-	{ name: 'left-bumper', parts: [ 'bumper_left' ] },
-	{ name: 'right-bumper', parts: [ 'bumper_right' ] },
-	{ name: 'left-trigger', parts: [ 'trigger_left' ], direction: PULL, depth: TRIGGER_DEPTH },
-	{ name: 'right-trigger', parts: [ 'trigger_right' ], direction: PULL, depth: TRIGGER_DEPTH },
+// while no gamepad is connected, a random button or stick is pushed every interval, in seconds
+const RANDOM_INTERVAL = 1.2;
+const RANDOM_HOLD = 0.5;
+const RANDOM_BUTTONS = [
+	'south', 'east', 'west', 'north', 'select', 'start', 'home',
+	'left-stick', 'right-stick', 'left-bumper', 'right-bumper', 'left-trigger', 'right-trigger',
+	'dpad-up', 'dpad-down', 'dpad-left', 'dpad-right',
 ];
-const STICKS = [
-	{ x: 'left-x', y: 'left-y', parts: LEFT_STICK },
-	{ x: 'right-x', y: 'right-y', parts: RIGHT_STICK },
+const RANDOM_STICKS = [
+	{ x: 'left-x', y: 'left-y' },
+	{ x: 'right-x', y: 'right-y' },
 ];
+const RANDOM_NAMES = [ ...RANDOM_BUTTONS, ...RANDOM_STICKS.flatMap( s => [ s.x, s.y ] ) ];
 
-const _force = new Vector3();
+// stands in for a gamepad, easing each value toward its target so presses look smooth
+const randomInput = {
+	values: {},
+	targets: {},
+	nextPress: 0,
+	release: 0,
+	getAxis( name ) {
+
+		return this.values[ name ] || 0;
+
+	},
+};
+
 const _torque = new Vector3();
 const _tilt = new Vector3();
 const _axis = new Vector3();
@@ -77,13 +72,15 @@ scene.environment = new PMREMGenerator( renderer ).fromScene( new RoomEnvironmen
 const sway = new Group();
 scene.add( sway );
 
-// input
+// input: show the model for the connected controller's brand
 const timer = new Timer();
 const status = document.getElementById( 'status' );
 const manager = new ControllerManager();
 manager.addEventListener( 'connected', e => {
 
-	if ( e.slot === 0 ) status.textContent = e.controller.id;
+	if ( e.slot !== 0 ) return;
+	status.textContent = e.controller.id;
+	showModel( e.controller.brand );
 
 } );
 
@@ -93,34 +90,35 @@ manager.addEventListener( 'disconnected', e => {
 
 } );
 
-// load the controller, swapping part names for the parts and keeping each part's rest position
+// load and show a controller model, keeping each loaded model to switch back to
 let model = null;
-const parts = [];
-new GLTFLoader()
-	.loadAsync( URL )
-	.then( gltf => {
+let shownBrand = null;
+const loaded = {};
+showModel( 'xbox' );
 
-		model = gltf.scene;
+function showModel( brand ) {
+
+	brand = brand in MODELS ? brand : 'xbox';
+	shownBrand = brand;
+	if ( ! loaded[ brand ] ) {
+
+		const { url, ModelClass } = MODELS[ brand ];
+		loaded[ brand ] = new GLTFLoader()
+			.loadAsync( url )
+			.then( gltf => new ModelClass( gltf.scene ) );
+
+	}
+
+	loaded[ brand ].then( controllerModel => {
+
+		if ( shownBrand !== brand ) return;
+		if ( model ) sway.remove( model );
+		model = controllerModel;
 		sway.add( model );
 
-		const getParts = names => names.map( name => {
-
-			const part = model.getObjectByName( name );
-			if ( ! parts.includes( part ) ) {
-
-				part.userData.rest = part.position.clone();
-				parts.push( part );
-
-			}
-
-			return part;
-
-		} );
-
-		BUTTONS.forEach( button => button.parts = getParts( button.parts ) );
-		STICKS.forEach( stick => stick.parts = getParts( stick.parts ) );
-
 	} );
+
+}
 
 onResize();
 window.addEventListener( 'resize', onResize );
@@ -131,81 +129,76 @@ function animate( timestamp ) {
 	timer.update( timestamp );
 	manager.update();
 
+	const delta = timer.getDelta();
+	const time = timer.getElapsed();
+	updateRandomInput( time, delta );
+
 	if ( model ) {
 
-		updateController( timer.getDelta() );
+		// show the gamepad in slot 0, or the random input if none is connected
+		const pad = manager.getController( 0 );
+		model.setFromController( pad && pad.connected ? pad : randomInput );
 
-		const time = timer.getElapsed();
-		sway.rotation.y = 0.25 * Math.sin( time * 0.5 );
-		sway.rotation.x = 0.08 * Math.sin( time * 0.7 );
-		sway.position.y = 0.02 * Math.sin( time );
+		// ease toward the tilt from the current pushes, the same at any frame rate
+		_tilt.lerp( model.getTilt( _torque ), 1 - Math.exp( - 12 * delta ) );
+
+		const angle = _tilt.length() * TILT;
+		if ( angle > 0 ) {
+
+			model.quaternion.setFromAxisAngle( _axis.copy( _tilt ).normalize(), angle );
+
+		} else {
+
+			model.quaternion.identity();
+
+		}
 
 	}
+
+	sway.rotation.y = 0.25 * Math.sin( time * 0.5 );
+	sway.rotation.x = 0.08 * Math.sin( time * 0.7 );
+	sway.position.y = 0.02 * Math.sin( time );
 
 	renderer.render( scene, camera );
 
 }
 
-// moves the parts for the gamepad in slot 0 and tilts the controller from the pushes
-function updateController( delta ) {
+// presses a random button or pushes a random stick each interval, then lets go
+function updateRandomInput( time, delta ) {
 
-	for ( let i = 0, l = parts.length; i < l; i ++ ) {
+	const { values, targets } = randomInput;
+	if ( time > randomInput.nextPress ) {
 
-		parts[ i ].position.copy( parts[ i ].userData.rest );
+		randomInput.nextPress = time + RANDOM_INTERVAL;
+		randomInput.release = time + RANDOM_HOLD;
 
-	}
+		const index = Math.floor( Math.random() * ( RANDOM_BUTTONS.length + RANDOM_STICKS.length ) );
+		if ( index < RANDOM_BUTTONS.length ) {
 
-	_torque.set( 0, 0, 0 );
+			targets[ RANDOM_BUTTONS[ index ] ] = 1;
 
-	const pad = manager.getController( 0 );
-	if ( pad && pad.connected ) {
+		} else {
 
-		for ( let i = 0, l = BUTTONS.length; i < l; i ++ ) {
-
-			const { name, parts, direction = IN, depth = PRESS_DEPTH } = BUTTONS[ i ];
-			push( parts, direction, pad.getAxis( name ), depth );
-
-		}
-
-		for ( let i = 0, l = STICKS.length; i < l; i ++ ) {
-
-			const { x, y, parts } = STICKS[ i ];
-			push( parts, RIGHT, pad.getAxis( x ), STICK_TRAVEL );
-			push( parts, DOWN, pad.getAxis( y ), STICK_TRAVEL );
+			const { x, y } = RANDOM_STICKS[ index - RANDOM_BUTTONS.length ];
+			const angle = Math.random() * 2 * Math.PI;
+			targets[ x ] = Math.cos( angle );
+			targets[ y ] = Math.sin( angle );
 
 		}
 
 	}
 
-	// ease toward the tilt from the current pushes, the same at any frame rate
-	_tilt.lerp( _torque, 1 - Math.exp( - 12 * delta ) );
+	const ease = 1 - Math.exp( - 15 * delta );
+	const released = time > randomInput.release;
+	for ( let i = 0, l = RANDOM_NAMES.length; i < l; i ++ ) {
 
-	const angle = _tilt.length() * TILT;
-	if ( angle > 0 ) {
+		const name = RANDOM_NAMES[ i ];
+		if ( released ) targets[ name ] = 0;
 
-		model.quaternion.setFromAxisAngle( _axis.copy( _tilt ).normalize(), angle );
-
-	} else {
-
-		model.quaternion.identity();
+		const value = values[ name ] || 0;
+		values[ name ] = value + ( ( targets[ name ] || 0 ) - value ) * ease;
 
 	}
-
-}
-
-// moves parts along a direction by "amount" of their full travel, adding the push's turning force
-function push( parts, direction, amount, travel ) {
-
-	if ( amount === 0 ) return;
-
-	for ( let i = 0, l = parts.length; i < l; i ++ ) {
-
-		parts[ i ].position.addScaledVector( direction, amount * travel );
-
-	}
-
-	_force.copy( direction ).multiplyScalar( amount );
-	_torque.add( _force.cross( parts[ 0 ].userData.rest ).negate() );
 
 }
 

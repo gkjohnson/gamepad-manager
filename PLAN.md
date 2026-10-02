@@ -8,7 +8,9 @@ First pass done:
 
 - `ControllerManager`: polls `navigator.getGamepads()` in `update()`, keeps gamepads in stable slots, fires `connected` / `disconnected`, and gives the keyboard and mouse through `getKeyboard()` / `getMouse()`.
 - `GamepadController`, `KeyboardController`, `MouseController` on a shared `Controller` base: `getButtonHeld` / `getButtonPressed` / `getButtonReleased` / `getAxis`, `pressed` / `released` / `connected` / `disconnected` events.
-- `example/` shows the controller model, with slot 0's buttons, triggers and sticks moving the matching parts.
+- `GamepadController.brand`: `'xbox'`, `'playstation'`, `'switch'` or `''`, guessed from the id ( USB vendor ids Microsoft `045e`, Sony `054c`, Nintendo `057e`, or names ).
+- `gamepad-manager/three`: `ControllerModel` with `setButton` / `setAxis` / `setFromController` / `getTilt`, and `XboxControllerModel` and `DualShockControllerModel` for the two models.
+- `example/` shows the model matching slot 0's brand, its parts following the gamepad, or random presses when none is connected.
 
 ## Usage
 
@@ -45,11 +47,13 @@ manager.getMouse().getButtonPressed( 'left' );
 ## Structure
 
 - `src/EventDispatcher.js`, `Controller.js` ( shared state, queries, events ), `GamepadController.js`, `KeyboardController.js`, `MouseController.js`, `ControllerManager.js`.
-- The core has no three.js dependency. three.js is only a dev dependency for the example.
+- `src/three/`: the `gamepad-manager/three` entry. `ControllerModel` does the work from a few settings per model ( press, bumper and trigger directions, rocking or four-button d-pad, stick pivot depth ); the subclasses only supply those. Each stick gets a pivot group under it so it tilts as one piece, and each trigger one along its top front edge so it swings like a hinge; both work on either model without per-model hinge settings.
+- The core has no three.js dependency; three.js is an optional peer dependency for `gamepad-manager/three`. `API.md` documents the core and `THREE_API.md` the models.
 
 ## Next
 
-- Printed labels per brand ( A / Cross ... ) for on-screen prompts, guessed from the id string ( USB vendor ids: Microsoft `045e`, Sony `054c`, Nintendo `057e`; format differs per browser ).
+- A Switch Pro Controller model and `SwitchControllerModel`, skipped for now: the only free CC BY models found on Sketchfab are poor.
+- Printed labels per brand ( A / Cross ... ) for on-screen prompts, from `brand`.
 - Rumble through `vibrationActuator`.
 - Mouse movement and wheel as axes.
 - Axes as buttons: stick directions ( `left-stick-up` ... ) as ordinary buttons with the same thresholds, queries and events.
@@ -64,19 +68,27 @@ manager.getMouse().getButtonPressed( 'left' );
 
 Start with the main controllers: Xbox and XInput pads, recent PlayStation pads and the Switch Pro Controller, which Chrome and Safari report with the `'standard'` mapping. Cheap USB pads, retro adapters, arcade and flight sticks and wheels are often unrecognized. Firefox has historically recognized fewer controllers than Chrome.
 
-## Controller model
+## Controller models
+
+Both are CC BY 4.0 and credited in the README. The credit for any model shown must stay visible wherever the demo is hosted ( `example/index.html` credits both ). Both name their moving parts the same way, by position: `button_south` / `east` / `west` / `north`, `button_select`, `button_start`, `button_home`, `bumper_left` / `right`, `trigger_left` / `right`, `stick_left` / `right` ( one node each ), and `dpad` or `dpad_up` / `down` / `left` / `right`. Each has its pivot at its center.
+
+### Xbox
 
 `example/models/xbox-controller.glb`, 830 KB.
 
-- Source: [Xbox Inalambric Controller (White)](https://sketchfab.com/3d-models/xbox-inalambric-controller-white-f18a70fc10414ef5a39b55de68f12823) by Chistodrako._., CC BY 4.0. The credit must stay visible wherever the demo is hosted.
-- The download is one mesh. It was split into 31 named parts, each its own node under a `controller` root with its pivot at the part's center: `body`, `dpad`, `button_a` / `b` / `x` / `y`, `button_view`, `button_menu`, `button_guide`, `guide_logo`, `button_pair`, `bumper_left` / `right`, `trigger_left` / `right`, `stick_left_cap` / `ring` / `base` and the right equivalents, plus shell pieces ( `grips_inner`, `battery_cover`, `top_panel`, `grip_right_panel` ) and `detail_*` pieces that weren't identified.
+- Source: [Xbox Inalambric Controller (White)](https://sketchfab.com/3d-models/xbox-inalambric-controller-white-f18a70fc10414ef5a39b55de68f12823) by [Chistodrako._.](https://sketchfab.com/oscar.lopez.riviello).
+- The download is one mesh. Its 31 pieces became the moving parts above under a `controller` root, with each stick's cap, ring and base merged into `stick_left` / `right`, the guide logo into `button_home`, and everything static into `body`. The d-pad is one piece ( `dpad` ).
 - Pieces were found as connected parts of the mesh. The bumpers and triggers only touch the body along texture seams, so they were cut out separately.
 - Compressed with gltf-transform: `metalrough` ( the download used the old specular-glossiness material, which three.js no longer supports ), `prune`, `dedup`, `quantize`, `webp`. No Draco or meshopt.
 - The split and naming script is not in the repo. It was a one-off; redo it from this description if the model needs rebuilding.
-- The face points along ( 0, 0.75, 0.66 ) in model space; the example presses buttons along the opposite direction.
+- The face points along ( 0, 0.75, 0.66 ) in model space; `XboxControllerModel` presses buttons along the opposite direction.
 
-To do:
+### DualShock 4
 
-- Triggers should rotate about their hinge, not their center. The example slides them for now.
-- Each stick's cap, ring and base need one shared pivot at the base so the stick tilts as a unit. The example slides all three, so the base leaves its socket.
-- Only an Xbox model exists. Other brands would need their own.
+`example/models/dualshock-controller.glb`, 1.75 MB ( from 65 MB ).
+
+- Source: [DualShock 4 PlayStation Controller](https://sketchfab.com/3d-models/dualshock-4-playstation-controller-e3c2f0dc16524fc19cdde45bad1de1a9) by [shaielwolf](https://sketchfab.com/shaielwolf).
+- The download has 8 meshes ( front and back shells, touchpad, joysticks, buttons, triggers, headphone jack, screws and USB ), each already split into separate pieces. Moving parts became their own nodes, named by position, with pivots at their centers: `button_south` / `east` / `west` / `north`, `button_select` ( Share ), `button_start` ( Options ), `button_home` ( PS ), `dpad_up` / `down` / `left` / `right` ( separate arrows ), `stick_left` / `right` ( one piece each ), `bumper_left` / `right`, `trigger_left` / `right`, `touchpad`. The static pieces of each mesh merged into `body_front`, `body_back`, `headphone_jack` and `screws_usb`.
+- Centered and scaled to the Xbox model's width ( 0.824 ). The face points along +z.
+- Compressed with gltf-transform: `prune`, `dedup`, `resize` ( 4096 textures to 1024 ), `quantize`, `webp`. Only the first UV set kept. No Draco or meshopt.
+- Like the Xbox model, the processing script is not in the repo.

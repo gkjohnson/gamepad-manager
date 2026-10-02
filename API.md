@@ -277,6 +277,16 @@ id: string
 The browser's id for the controller model, e.g. its product name. Kept after disconnecting.
 
 
+### .brand
+
+```js
+brand: string
+```
+
+The controller's brand, guessed from `id`: `'xbox'`, `'playstation'`, `'switch'`, or `''`
+when unknown. Many third-party controllers report themselves as Xbox controllers.
+
+
 ### .index
 
 ```js
