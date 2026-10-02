@@ -10,12 +10,72 @@ const STANDARD_BUTTONS = [
 ];
 const STANDARD_AXES = [ 'left-x', 'left-y', 'right-x', 'right-y' ];
 
-// brands by their USB vendor id or name in the browser's gamepad id, which varies by browser
+// brands by their USB vendor id or name in the browser's gamepad id, which varies by browser. Safari
+// writes vendor ids without the leading zero
 const BRANDS = [
-	[ 'xbox', /045e|xbox|xinput/i ],
-	[ 'playstation', /054c|playstation|dualshock|dualsense/i ],
-	[ 'switch', /057e|nintendo|pro controller|joy-con/i ],
+	[ 'xbox', /\b0?45e\b|xbox|xinput/i ],
+	[ 'playstation', /\b0?54c\b|playstation|dualshock|dualsense/i ],
+	[ 'nintendo', /\b0?57e\b|nintendo|pro controller|joy-con/i ],
 ];
+
+// printed names of the standard buttons for each brand
+const DPAD_NAMES = {
+	'dpad-up': 'D-pad Up',
+	'dpad-down': 'D-pad Down',
+	'dpad-left': 'D-pad Left',
+	'dpad-right': 'D-pad Right',
+};
+
+const BUTTON_NAMES = {
+	xbox: {
+		...DPAD_NAMES,
+		'south': 'A',
+		'east': 'B',
+		'west': 'X',
+		'north': 'Y',
+		'left-bumper': 'LB',
+		'right-bumper': 'RB',
+		'left-trigger': 'LT',
+		'right-trigger': 'RT',
+		'select': 'View',
+		'start': 'Menu',
+		'left-stick': 'LS',
+		'right-stick': 'RS',
+		'home': 'Guide',
+	},
+	playstation: {
+		...DPAD_NAMES,
+		'south': 'Cross',
+		'east': 'Circle',
+		'west': 'Square',
+		'north': 'Triangle',
+		'left-bumper': 'L1',
+		'right-bumper': 'R1',
+		'left-trigger': 'L2',
+		'right-trigger': 'R2',
+		'select': 'Create',
+		'start': 'Options',
+		'left-stick': 'L3',
+		'right-stick': 'R3',
+		'home': 'PS',
+	},
+	nintendo: {
+		...DPAD_NAMES,
+		'south': 'B',
+		'east': 'A',
+		'west': 'Y',
+		'north': 'X',
+		'left-bumper': 'L',
+		'right-bumper': 'R',
+		'left-trigger': 'ZL',
+		'right-trigger': 'ZR',
+		'select': '-',
+		'start': '+',
+		'left-stick': 'L Stick',
+		'right-stick': 'R Stick',
+		'home': 'Home',
+	},
+};
 
 /**
  * @typedef {Object} GamepadFeatures
@@ -60,7 +120,7 @@ export class GamepadController extends Controller {
 		this.id = '';
 
 		/**
-		 * The controller's brand, guessed from `id`: `'xbox'`, `'playstation'`, `'switch'`, or `''`
+		 * The controller's brand, guessed from `id`: `'xbox'`, `'playstation'`, `'nintendo'`, or `''`
 		 * when unknown. Many third-party controllers report themselves as Xbox controllers.
 		 * @type {string}
 		 */
@@ -88,6 +148,22 @@ export class GamepadController extends Controller {
 		this._buttonNames = [];
 		this._axisNames = [];
 		this._connectionEvent = { type: '', target: null };
+
+	}
+
+	/**
+	 * Returns the name printed on the controller for a button, e.g. `'A'` for `south` on Xbox and
+	 * `'Cross'` on PlayStation. Unknown brands get the Xbox names, and controllers without the
+	 * `'standard'` mapping get `name` back.
+	 * @param {string} name
+	 * @returns {string}
+	 */
+	getButtonName( name ) {
+
+		if ( this.features.mapping !== 'standard' ) return name;
+
+		const names = BUTTON_NAMES[ this.brand ] || BUTTON_NAMES.xbox;
+		return names[ name ] || name;
 
 	}
 

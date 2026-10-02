@@ -46,9 +46,9 @@ frame();
 
 ## Button names
 
-Gamepads with the browser's `'standard'` mapping:
+Gamepads with the browser's `'standard'` mapping, with the printed names `getButtonName` returns for each brand ( Xbox's for unknown brands ):
 
-| Name | Xbox | PlayStation | Switch |
+| Name | Xbox | PlayStation | Nintendo |
 |---|---|---|---|
 | `south` | A | Cross | B |
 | `east` | B | Circle | A |
@@ -57,8 +57,8 @@ Gamepads with the browser's `'standard'` mapping:
 | `left-bumper`, `right-bumper` | LB, RB | L1, R1 | L, R |
 | `left-trigger`, `right-trigger` | LT, RT | L2, R2 | ZL, ZR |
 | `select`, `start` | View, Menu | Create, Options | -, + |
-| `left-stick`, `right-stick` | stick presses | L3, R3 | stick presses |
-| `dpad-up`, `dpad-down`, `dpad-left`, `dpad-right` | d-pad | d-pad | d-pad |
+| `left-stick`, `right-stick` | LS, RS | L3, R3 | L Stick, R Stick |
+| `dpad-up`, `dpad-down`, `dpad-left`, `dpad-right` | D-pad Up, ... | D-pad Up, ... | D-pad Up, ... |
 | `home` | Guide | PS | Home |
 
 Axes are `left-x`, `left-y`, `right-x` and `right-y`, from -1 to 1. Unrecognized controllers get `button-0`, `axis-0` and so on.
@@ -67,7 +67,7 @@ The keyboard uses `KeyboardEvent.code` names ( `KeyW`, `Space`, `ArrowUp` ), and
 
 ## Controller models
 
-`gamepad-manager/three` has three.js models that show a controller's state, for the models in `example/models/`. A gamepad's `brand` ( `'xbox'`, `'playstation'`, `'switch'` or `''` ) picks the one to show:
+`gamepad-manager/three` has three.js models that show a controller's state, for the models in `example/models/`. A gamepad's `brand` ( `'xbox'`, `'playstation'`, `'nintendo'` or `''` ) picks the one to show:
 
 ```js
 import { DualShockControllerModel, XboxControllerModel } from 'gamepad-manager/three';

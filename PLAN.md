@@ -8,7 +8,7 @@ First pass done:
 
 - `ControllerManager`: polls `navigator.getGamepads()` in `update()`, keeps gamepads in stable slots, fires `connected` / `disconnected`, and gives the keyboard and mouse through `getKeyboard()` / `getMouse()`.
 - `GamepadController`, `KeyboardController`, `MouseController` on a shared `Controller` base: `getButtonHeld` / `getButtonPressed` / `getButtonReleased` / `getAxis`, `pressed` / `released` / `connected` / `disconnected` events.
-- `GamepadController.brand`: `'xbox'`, `'playstation'`, `'switch'` or `''`, guessed from the id ( USB vendor ids Microsoft `045e`, Sony `054c`, Nintendo `057e`, or names ).
+- `GamepadController.brand`: `'xbox'`, `'playstation'`, `'nintendo'` or `''`, guessed from the id ( USB vendor ids Microsoft `045e`, Sony `054c`, Nintendo `057e`, with or without the leading zero, or names ). `getButtonName` gives a button's printed name for the brand ( `'A'`, `'Cross'` ), the Xbox names for unknown brands, and the name unchanged without the `'standard'` mapping.
 - `gamepad-manager/three`: `ControllerModel` with `setButton` / `setAxis` / `setFromController` / `getTilt`, and `XboxControllerModel` and `DualShockControllerModel` for the two models.
 - `example/` shows the model matching slot 0's brand while a gamepad is connected, with its parts following the gamepad, tipping to show the top while the bumpers or triggers are in use. With none connected it only asks for one to be plugged in.
 
@@ -53,7 +53,6 @@ manager.getMouse().getButtonPressed( 'left' );
 ## Next
 
 - A Switch Pro Controller model and `SwitchControllerModel`, skipped for now: the only free CC BY models found on Sketchfab are poor.
-- Printed labels per brand ( A / Cross ... ) for on-screen prompts, from `brand`.
 - Rumble through `vibrationActuator`.
 - Mouse movement and wheel as axes.
 - Axes as buttons: stick directions ( `left-stick-up` ... ) as ordinary buttons with the same thresholds, queries and events.

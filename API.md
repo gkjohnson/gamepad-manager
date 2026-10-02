@@ -295,7 +295,7 @@ The browser's id for the controller model, e.g. its product name. Kept after dis
 brand: string
 ```
 
-The controller's brand, guessed from `id`: `'xbox'`, `'playstation'`, `'switch'`, or `''`
+The controller's brand, guessed from `id`: `'xbox'`, `'playstation'`, `'nintendo'`, or `''`
 when unknown. Many third-party controllers report themselves as Xbox controllers.
 
 
@@ -325,6 +325,17 @@ deadZone: number
 
 Stick values under this distance from center read as 0, and values beyond it are rescaled to
 start from 0. Applied to each stick's x and y together.
+
+
+### .getButtonName
+
+```js
+getButtonName( name: string ): string
+```
+
+Returns the name printed on the controller for a button, e.g. `'A'` for `south` on Xbox and
+`'Cross'` on PlayStation. Unknown brands get the Xbox names, and controllers without the
+`'standard'` mapping get `name` back.
 
 
 ## KeyboardController
