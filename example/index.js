@@ -23,12 +23,18 @@ const MODELS = {
 // how much the pushes tilt the controller
 const TILT = 0.1;
 
-// the bumpers and triggers, how long after they're let go, in seconds, the view tips back, and how
-// quickly it tips toward the top and back to the front
+// the bumpers and triggers, how long after they're let go the view tips back, and roughly how long it
+// takes to tip toward the top and back to the front, in seconds
 const SHOULDER_BUTTONS = [ 'left-bumper', 'right-bumper', 'left-trigger', 'right-trigger' ];
 const SHOULDER_HOLD = 1;
-const TIP_SPEED = 4;
-const RETURN_SPEED = 1.2;
+const TIP_TIME = 0.3;
+const RETURN_TIME = 0.8;
+
+// how far below the view the controller waits while no gamepad is connected, roughly how long it
+// takes to slide in, and how long to slide out, in seconds
+const HIDDEN_Y = - 1.1;
+const SLIDE_TIME = 0.2;
+const EXIT_TIME = 0.4;
 
 const _torque = new Vector3();
 const _tilt = new Vector3();
@@ -68,22 +74,37 @@ manager.addEventListener( 'connected', e => {
 
 manager.addEventListener( 'disconnected', e => {
 
-	if ( e.slot === 0 ) status.textContent = 'Press a button on a controller';
+	if ( e.slot !== 0 ) return;
+	status.textContent = 'Plug in a controller and press a button';
+	hideModel();
 
 } );
 
-// load and show a controller model, keeping each loaded model to switch back to
+// the model for the gamepad in slot 0, which slides up into view while one is connected and back down
+// out of view when it disconnects, keeping each loaded model to switch back to
 let model = null;
+let shown = false;
 let shownBrand = null;
-let topAngle = 0;
 let lastShoulderTime = - Infinity;
+
+// the current tip toward the top and slide into view, and how fast each is moving. A slide out
+// records when it started and from where
+const tip = { value: 0, velocity: 0 };
+const slide = { value: HIDDEN_Y, velocity: 0, exitStart: - 1, exitFrom: 0 };
 const loaded = {};
 const DEFAULT_BRAND = 'xbox';
-showModel( DEFAULT_BRAND );
+
+// slides the model out of view, removing it once it's gone ( see animate )
+function hideModel() {
+
+	shown = false;
+
+}
 
 function showModel( brand ) {
 
 	brand = brand in MODELS ? brand : DEFAULT_BRAND;
+	shown = true;
 	shownBrand = brand;
 	if ( ! loaded[ brand ] ) {
 
@@ -96,7 +117,7 @@ function showModel( brand ) {
 
 	loaded[ brand ].then( controllerModel => {
 
-		if ( shownBrand !== brand ) return;
+		if ( ! shown || shownBrand !== brand || model === controllerModel ) return;
 		if ( model ) sway.remove( model );
 		model = controllerModel;
 		sway.add( model );
@@ -147,15 +168,59 @@ function animate( timestamp ) {
 
 	// tip the controller to show its top while the bumpers or triggers are in use, easing slowly back
 	// to the front view a moment after they're let go
-	const topTarget = model && time - lastShoulderTime < SHOULDER_HOLD ? MODELS[ shownBrand ].topAngle : 0;
-	const speed = topTarget > topAngle ? TIP_SPEED : RETURN_SPEED;
-	topAngle += ( topTarget - topAngle ) * ( 1 - Math.exp( - speed * delta ) );
+	const target = model && time - lastShoulderTime < SHOULDER_HOLD ? MODELS[ shownBrand ].topAngle : 0;
+	smoothDamp( tip, target, target > 0 ? TIP_TIME : RETURN_TIME, delta );
+
+	// slide the model up into view while a gamepad is connected, once it's loaded. On the way out it
+	// eases in, starting slowly and leaving at speed, and is removed once it's gone
+	if ( shown && model ) {
+
+		slide.exitStart = - 1;
+		smoothDamp( slide, 0, SLIDE_TIME, delta );
+
+	} else if ( model ) {
+
+		if ( slide.exitStart < 0 ) {
+
+			slide.exitStart = time;
+			slide.exitFrom = slide.value;
+
+		}
+
+		// keep the speed, so a controller reconnecting mid-exit turns it around smoothly
+		const t = Math.min( ( time - slide.exitStart ) / EXIT_TIME, 1 );
+		const previous = slide.value;
+		slide.value = slide.exitFrom + ( HIDDEN_Y - slide.exitFrom ) * t * t * t;
+		slide.velocity = delta > 0 ? ( slide.value - previous ) / delta : 0;
+		if ( t === 1 ) {
+
+			sway.remove( model );
+			model = null;
+			slide.exitStart = - 1;
+
+		}
+
+	}
 
 	sway.rotation.y = 0.25 * Math.sin( time * 0.5 );
-	sway.rotation.x = topAngle + 0.08 * Math.sin( time * 0.7 );
-	sway.position.y = 0.02 * Math.sin( time );
+	sway.rotation.x = tip.value + 0.08 * Math.sin( time * 0.7 );
+	sway.position.y = slide.value + 0.02 * Math.sin( time );
 
 	renderer.render( scene, camera );
+
+}
+
+// moves "state.value" toward "target" like a critically damped spring, keeping "state.velocity" so
+// a changed target doesn't jolt it; "smoothTime" is roughly how long it takes to get there
+function smoothDamp( state, target, smoothTime, delta ) {
+
+	const omega = 2 / smoothTime;
+	const x = omega * delta;
+	const decay = 1 / ( 1 + x + 0.48 * x * x + 0.235 * x * x * x );
+	const change = state.value - target;
+	const temp = ( state.velocity + omega * change ) * delta;
+	state.velocity = ( state.velocity - omega * temp ) * decay;
+	state.value = target + ( change + temp ) * decay;
 
 }
 

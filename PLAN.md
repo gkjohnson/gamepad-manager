@@ -10,7 +10,7 @@ First pass done:
 - `GamepadController`, `KeyboardController`, `MouseController` on a shared `Controller` base: `getButtonHeld` / `getButtonPressed` / `getButtonReleased` / `getAxis`, `pressed` / `released` / `connected` / `disconnected` events.
 - `GamepadController.brand`: `'xbox'`, `'playstation'`, `'switch'` or `''`, guessed from the id ( USB vendor ids Microsoft `045e`, Sony `054c`, Nintendo `057e`, or names ).
 - `gamepad-manager/three`: `ControllerModel` with `setButton` / `setAxis` / `setFromController` / `getTilt`, and `XboxControllerModel` and `DualShockControllerModel` for the two models.
-- `example/` shows the model matching slot 0's brand with its parts following the gamepad, tipping to show the top while the bumpers or triggers are in use.
+- `example/` shows the model matching slot 0's brand while a gamepad is connected, with its parts following the gamepad, tipping to show the top while the bumpers or triggers are in use. With none connected it only asks for one to be plugged in.
 
 ## Usage
 
