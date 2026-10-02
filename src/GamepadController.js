@@ -10,6 +10,14 @@ const STANDARD_BUTTONS = [
 ];
 const STANDARD_AXES = [ 'left-x', 'left-y', 'right-x', 'right-y' ];
 
+// button names for each standard axis's negative and positive directions
+const STANDARD_AXIS_BUTTONS = [
+	[ 'left-stick-left', 'left-stick-right' ],
+	[ 'left-stick-up', 'left-stick-down' ],
+	[ 'right-stick-left', 'right-stick-right' ],
+	[ 'right-stick-up', 'right-stick-down' ],
+];
+
 // brands by their USB vendor id or name in the browser's gamepad id, which varies by browser. Safari
 // writes vendor ids without the leading zero
 const BRANDS = [
@@ -19,16 +27,24 @@ const BRANDS = [
 ];
 
 // printed names of the standard buttons for each brand
-const DPAD_NAMES = {
+const DIRECTION_NAMES = {
 	'dpad-up': 'D-pad Up',
 	'dpad-down': 'D-pad Down',
 	'dpad-left': 'D-pad Left',
 	'dpad-right': 'D-pad Right',
+	'left-stick-up': 'Left Stick Up',
+	'left-stick-down': 'Left Stick Down',
+	'left-stick-left': 'Left Stick Left',
+	'left-stick-right': 'Left Stick Right',
+	'right-stick-up': 'Right Stick Up',
+	'right-stick-down': 'Right Stick Down',
+	'right-stick-left': 'Right Stick Left',
+	'right-stick-right': 'Right Stick Right',
 };
 
 const BUTTON_NAMES = {
 	xbox: {
-		...DPAD_NAMES,
+		...DIRECTION_NAMES,
 		'south': 'A',
 		'east': 'B',
 		'west': 'X',
@@ -44,7 +60,7 @@ const BUTTON_NAMES = {
 		'home': 'Guide',
 	},
 	playstation: {
-		...DPAD_NAMES,
+		...DIRECTION_NAMES,
 		'south': 'Cross',
 		'east': 'Circle',
 		'west': 'Square',
@@ -60,7 +76,7 @@ const BUTTON_NAMES = {
 		'home': 'PS',
 	},
 	nintendo: {
-		...DPAD_NAMES,
+		...DIRECTION_NAMES,
 		'south': 'B',
 		'east': 'A',
 		'west': 'Y',
@@ -83,7 +99,11 @@ const BUTTON_NAMES = {
  * isn't recognized and buttons and axes are only numbered.
  * @property {number} buttons - Number of buttons.
  * @property {number} axes - Number of axes.
- * @property {boolean} rumble - Whether the browser exposes a vibration actuator.
+ * @property {boolean} rumble - Whether the gamepad supports the `'dual-rumble'` effect. Browsers
+ * without a list of supported effects, like Safari, report true whenever they expose a vibration
+ * actuator.
+ * @property {boolean} triggerRumble - Whether the gamepad supports the `'trigger-rumble'` effect,
+ * the motors in the triggers of Xbox controllers.
  */
 
 /**
@@ -103,6 +123,10 @@ const BUTTON_NAMES = {
  * `left-trigger`, `right-trigger`, `select`, `start`, `left-stick`, `right-stick`, `dpad-up`,
  * `dpad-down`, `dpad-left`, `dpad-right` and `home`, and axes `left-x`, `left-y`, `right-x` and
  * `right-y`. Otherwise they're named `button-0`, `axis-0` and so on.
+ *
+ * Each axis direction is also a button, held past `pressThreshold` like a trigger: `left-stick-up`,
+ * `left-stick-down`, `left-stick-left`, `left-stick-right` and the same for `right-stick`, or
+ * `axis-0-negative`, `axis-0-positive` and so on without the `'standard'` mapping.
  *
  * Created by `ControllerManager`, and kept in its slot across disconnects so references stay valid.
  * @extends Controller
@@ -136,7 +160,7 @@ export class GamepadController extends Controller {
 		 * What the connected gamepad exposes.
 		 * @type {GamepadFeatures}
 		 */
-		this.features = { mapping: '', buttons: 0, axes: 0, rumble: false };
+		this.features = { mapping: '', buttons: 0, axes: 0, rumble: false, triggerRumble: false };
 
 		/**
 		 * Stick values under this distance from center read as 0, and values beyond it are rescaled to
@@ -147,6 +171,8 @@ export class GamepadController extends Controller {
 
 		this._buttonNames = [];
 		this._axisNames = [];
+		this._axisNegativeNames = [];
+		this._axisPositiveNames = [];
 		this._connectionEvent = { type: '', target: null };
 
 	}
@@ -164,6 +190,39 @@ export class GamepadController extends Controller {
 
 		const names = BUTTON_NAMES[ this.brand ] || BUTTON_NAMES.xbox;
 		return names[ name ] || name;
+
+	}
+
+	/**
+	 * Plays a rumble effect through the gamepad's `vibrationActuator.playEffect`. Check
+	 * `features.rumble` and `features.triggerRumble` for support.
+	 * @param {string} type - `'dual-rumble'` or `'trigger-rumble'`.
+	 * @param {Object} [params] - The effect's `duration` and `startDelay` in milliseconds, and
+	 * `strongMagnitude`, `weakMagnitude`, `leftTrigger` and `rightTrigger` from 0 to 1.
+	 * @returns {Promise<string>|null} Resolves `'complete'`, or `'preempted'` when another effect
+	 * replaces it. Null when the gamepad isn't connected or can't rumble.
+	 */
+	rumble( type, params ) {
+
+		const gamepad = this.connected ? navigator.getGamepads()[ this.index ] : null;
+		if ( ! gamepad || ! gamepad.vibrationActuator ) return null;
+
+		return gamepad.vibrationActuator.playEffect( type, params );
+
+	}
+
+	/**
+	 * Stops the current rumble effect through the gamepad's `vibrationActuator.reset`. The stopped
+	 * effect's promise resolves `'preempted'`.
+	 * @returns {Promise<string>|null} Resolves `'complete'`. Null when the gamepad isn't connected or
+	 * can't rumble.
+	 */
+	stopRumble() {
+
+		const gamepad = this.connected ? navigator.getGamepads()[ this.index ] : null;
+		if ( ! gamepad || ! gamepad.vibrationActuator ) return null;
+
+		return gamepad.vibrationActuator.reset();
 
 	}
 
@@ -193,7 +252,12 @@ export class GamepadController extends Controller {
 		features.mapping = gamepad.mapping;
 		features.buttons = gamepad.buttons.length;
 		features.axes = gamepad.axes.length;
-		features.rumble = Boolean( gamepad.vibrationActuator );
+
+		// only Chrome lists the supported effects, so otherwise assume dual rumble with an actuator
+		const actuator = gamepad.vibrationActuator;
+		const effects = actuator && actuator.effects;
+		features.rumble = effects ? effects.includes( 'dual-rumble' ) : Boolean( actuator );
+		features.triggerRumble = effects ? effects.includes( 'trigger-rumble' ) : false;
 
 		const standard = gamepad.mapping === 'standard';
 		this._buttonNames.length = 0;
@@ -204,9 +268,14 @@ export class GamepadController extends Controller {
 		}
 
 		this._axisNames.length = 0;
+		this._axisNegativeNames.length = 0;
+		this._axisPositiveNames.length = 0;
 		for ( let i = 0; i < features.axes; i ++ ) {
 
-			this._axisNames.push( standard && i < STANDARD_AXES.length ? STANDARD_AXES[ i ] : `axis-${ i }` );
+			const named = standard && i < STANDARD_AXES.length;
+			this._axisNames.push( named ? STANDARD_AXES[ i ] : `axis-${ i }` );
+			this._axisNegativeNames.push( named ? STANDARD_AXIS_BUTTONS[ i ][ 0 ] : `axis-${ i }-negative` );
+			this._axisPositiveNames.push( named ? STANDARD_AXIS_BUTTONS[ i ][ 1 ] : `axis-${ i }-positive` );
 
 		}
 
@@ -270,6 +339,17 @@ export class GamepadController extends Controller {
 
 			const value = axes[ i ];
 			this._setAxis( axisNames[ i ], value * this._deadZoneScale( Math.abs( value ) ) );
+
+		}
+
+		// each axis direction as a button
+		const negativeNames = this._axisNegativeNames;
+		const positiveNames = this._axisPositiveNames;
+		for ( let i = 0, l = axisNames.length; i < l; i ++ ) {
+
+			const value = this._axes.get( axisNames[ i ] );
+			this._setButton( negativeNames[ i ], Math.max( - value, 0 ) );
+			this._setButton( positiveNames[ i ], Math.max( value, 0 ) );
 
 		}
 

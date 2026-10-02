@@ -3,6 +3,8 @@ import { GamepadController } from './GamepadController.js';
 import { KeyboardController } from './KeyboardController.js';
 import { MouseController } from './MouseController.js';
 
+/** @import { Controller } from './Controller.js' */
+
 const _empty = [];
 
 // how long, in milliseconds, a new gamepad matching a connected controller waits for that controller
@@ -50,6 +52,14 @@ export class ControllerManager extends EventDispatcher {
 		 * @type {Array<GamepadController>}
 		 */
 		this.controllers = [];
+
+		/**
+		 * The device that most recently had a button pressed, a stick or axis moved, or, for the mouse,
+		 * moved, e.g. for switching on-screen prompts between keyboard and gamepad. Null until then.
+		 * Kept after a gamepad disconnects.
+		 * @type {Controller|null}
+		 */
+		this.lastActive = null;
 
 		this._keyboard = null;
 		this._mouse = null;
@@ -155,12 +165,12 @@ export class ControllerManager extends EventDispatcher {
 		for ( let i = 0, l = controllers.length; i < l; i ++ ) {
 
 			const controller = controllers[ i ];
-			if ( controller.connected ) controller.update( gamepads[ controller.index ] );
+			if ( controller.connected ) this._updateController( controller, gamepads[ controller.index ] );
 
 		}
 
-		if ( this._keyboard ) this._keyboard.update();
-		if ( this._mouse ) this._mouse.update();
+		if ( this._keyboard ) this._updateController( this._keyboard, null );
+		if ( this._mouse ) this._updateController( this._mouse, null );
 
 	}
 
@@ -189,6 +199,14 @@ export class ControllerManager extends EventDispatcher {
 
 		if ( this._keyboard ) this._keyboard.dispose();
 		if ( this._mouse ) this._mouse.dispose();
+
+	}
+
+	_updateController( controller, gamepad ) {
+
+		controller._active = false;
+		controller.update( gamepad );
+		if ( controller._active ) this.lastActive = controller;
 
 	}
 

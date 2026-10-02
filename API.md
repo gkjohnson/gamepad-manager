@@ -1,6 +1,14 @@
 <!-- This file is generated automatically. Do not edit it directly. -->
 # gamepad-manager
 
+## Constants
+
+### _empty
+
+```js
+_empty
+```
+
 ## EventDispatcher
 
 Minimal event dispatcher, following three.js's `EventDispatcher`. Events are plain objects with a
@@ -80,6 +88,17 @@ controllers: Array<GamepadController>
 
 Gamepads by slot. Each stays in its slot after disconnecting, with `connected` false, so
 references to it remain valid and it's reused if the slot is filled again.
+
+
+### .lastActive
+
+```js
+lastActive: Controller | null
+```
+
+The device that most recently had a button pressed, a stick or axis moved, or, for the mouse,
+moved, e.g. for switching on-screen prompts between keyboard and gamepad. Null until then.
+Kept after a gamepad disconnects.
 
 
 ### .getController
@@ -198,6 +217,16 @@ How far a held analog button must come back to count as released. Lower than
 `pressThreshold` so a trigger resting near it doesn't flicker.
 
 
+### .getButtonName
+
+```js
+getButtonName( name: string ): string
+```
+
+The name printed on the device for a button, e.g. `'A'` for a gamepad's `south` or `'W'` for
+the keyboard's `KeyW`, for on-screen prompts. Implemented by each device; this returns `name`.
+
+
 ### .getButtonHeld
 
 ```js
@@ -265,6 +294,10 @@ A gamepad. With the browser's `'standard'` mapping buttons are named by position
 `left-trigger`, `right-trigger`, `select`, `start`, `left-stick`, `right-stick`, `dpad-up`,
 `dpad-down`, `dpad-left`, `dpad-right` and `home`, and axes `left-x`, `left-y`, `right-x` and
 `right-y`. Otherwise they're named `button-0`, `axis-0` and so on.
+
+Each axis direction is also a button, held past `pressThreshold` like a trigger: `left-stick-up`,
+`left-stick-down`, `left-stick-left`, `left-stick-right` and the same for `right-stick`, or
+`axis-0-negative`, `axis-0-positive` and so on without the `'standard'` mapping.
 
 Created by `ControllerManager`, and kept in its slot across disconnects so references stay valid.
 
@@ -338,6 +371,26 @@ Returns the name printed on the controller for a button, e.g. `'A'` for `south` 
 `'standard'` mapping get `name` back.
 
 
+### .rumble
+
+```js
+rumble( type: string, params: Object ): Promise<string> | null
+```
+
+Plays a rumble effect through the gamepad's `vibrationActuator.playEffect`. Check
+`features.rumble` and `features.triggerRumble` for support.
+
+
+### .stopRumble
+
+```js
+stopRumble(): Promise<string> | null
+```
+
+Stops the current rumble effect through the gamepad's `vibrationActuator.reset`. The stopped
+effect's promise resolves `'preempted'`.
+
+
 ## KeyboardController
 
 _extends [`Controller`](#controller)_
@@ -348,6 +401,17 @@ reads as pressed for one update. Held keys are released when the window loses fo
 `ControllerManager.getKeyboard`.
 
 
+### .getButtonName
+
+```js
+getButtonName( name: string ): string
+```
+
+The key's printed name, e.g. `'W'` for `KeyW`, `'Left Shift'` for `ShiftLeft` and `'Page Up'`
+for `PageUp`. Letter, number and punctuation keys follow the user's layout in browsers that
+expose it ( `navigator.keyboard.getLayoutMap` ), and a US layout otherwise.
+
+
 ## MouseController
 
 _extends [`Controller`](#controller)_
@@ -355,6 +419,26 @@ _extends [`Controller`](#controller)_
 The mouse buttons: `left`, `middle`, `right`, `back` and `forward`. A click between two updates
 still reads as pressed for one update. Held buttons are released when the window loses focus.
 Get it from `ControllerManager.getMouse`.
+
+
+### .getPosition
+
+```js
+getPosition( target: Object ): Object
+```
+
+Gets the mouse position in CSS pixels from the window's top left corner, as of the last update.
+Reads 0, 0 until the mouse first moves over the page.
+
+
+### .getButtonName
+
+```js
+getButtonName( name: string ): string
+```
+
+The button's printed name: `'Left Click'`, `'Middle Click'`, `'Right Click'`, `'Mouse Back'` or
+`'Mouse Forward'`.
 
 
 ## GamepadFeatures
@@ -391,4 +475,15 @@ Number of axes.
 rumble: boolean
 ```
 
-Whether the browser exposes a vibration actuator.
+Whether the gamepad supports the `'dual-rumble'` effect. Browsers
+without a list of supported effects, like Safari, report true whenever they expose a vibration
+actuator.
+
+### .triggerRumble
+
+```js
+triggerRumble: boolean
+```
+
+Whether the gamepad supports the `'trigger-rumble'` effect,
+the motors in the triggers of Xbox controllers.

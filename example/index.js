@@ -211,8 +211,17 @@ manager.addEventListener( 'connected', e => {
 	}
 
 	addDisplay( e.controller, e.controller.brand );
+	e.controller.addEventListener( 'pressed', onGamepadPressed );
 
 } );
+
+// a short rumble on every button press
+const PRESS_RUMBLE = { duration: 60, strongMagnitude: 0.3, weakMagnitude: 0.6 };
+function onGamepadPressed( e ) {
+
+	e.target.rumble( 'dual-rumble', PRESS_RUMBLE );
+
+}
 
 manager.addEventListener( 'disconnected', e => {
 

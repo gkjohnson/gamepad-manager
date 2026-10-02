@@ -56,6 +56,21 @@ export class Controller extends EventDispatcher {
 		this._axes = new Map();
 		this._event = { type: '', name: '', target: null };
 
+		// whether a button was pressed or an axis moved in the last update, for the manager's lastActive
+		this._active = false;
+
+	}
+
+	/**
+	 * The name printed on the device for a button, e.g. `'A'` for a gamepad's `south` or `'W'` for
+	 * the keyboard's `KeyW`, for on-screen prompts. Implemented by each device; this returns `name`.
+	 * @param {string} name
+	 * @returns {string}
+	 */
+	getButtonName( name ) {
+
+		return name;
+
 	}
 
 	/**
@@ -163,13 +178,20 @@ export class Controller extends EventDispatcher {
 		button.held = held;
 		button.value = value;
 
-		if ( button.pressed ) this._dispatch( 'pressed', name );
+		if ( button.pressed ) {
+
+			this._active = true;
+			this._dispatch( 'pressed', name );
+
+		}
+
 		if ( button.released ) this._dispatch( 'released', name );
 
 	}
 
 	_setAxis( name, value ) {
 
+		if ( value !== 0 && value !== this._axes.get( name ) ) this._active = true;
 		this._axes.set( name, value );
 
 	}

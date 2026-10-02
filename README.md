@@ -61,9 +61,11 @@ Gamepads with the browser's `'standard'` mapping, with the printed names `getBut
 | `dpad-up`, `dpad-down`, `dpad-left`, `dpad-right` | D-pad Up, ... | D-pad Up, ... | D-pad Up, ... |
 | `home` | Guide | PS | Home |
 
-Axes are `left-x`, `left-y`, `right-x` and `right-y`, from -1 to 1. Unrecognized controllers get `button-0`, `axis-0` and so on.
+Axes are `left-x`, `left-y`, `right-x` and `right-y`, from -1 to 1. Each stick direction is also a button, `left-stick-up`, `left-stick-down`, `left-stick-left`, `left-stick-right` and the same for `right-stick`, held when pushed past halfway. Unrecognized controllers get `button-0`, `axis-0`, `axis-0-negative`, `axis-0-positive` and so on.
 
-The keyboard uses `KeyboardEvent.code` names ( `KeyW`, `Space`, `ArrowUp` ), and the mouse `left`, `middle`, `right`, `back` and `forward`.
+The keyboard uses `KeyboardEvent.code` names ( `KeyW`, `Space`, `ArrowUp` ), and the mouse `left`, `middle`, `right`, `back` and `forward`. `getMouse().getPosition( target )` gives the mouse position in CSS pixels.
+
+Every device has `getButtonName( name )` for on-screen prompts: `'A'` or `'Cross'` for a gamepad's `south`, `'W'` for `KeyW` ( following the user's layout where the browser exposes it ), `'Left Click'` for the mouse's `left`. `manager.lastActive` is the device last used, to pick which prompts to show.
 
 ## Controller models
 
