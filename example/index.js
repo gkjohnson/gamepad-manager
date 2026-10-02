@@ -1,9 +1,12 @@
 import {
 	Color,
 	Group,
+	Mesh,
+	MeshBasicMaterial,
 	PerspectiveCamera,
 	PMREMGenerator,
 	Scene,
+	SphereGeometry,
 	Timer,
 	Vector3,
 	WebGLRenderer,
@@ -17,11 +20,29 @@ import { DualShockControllerModel, XboxControllerModel } from '../src/three/inde
 // tip it to show its top edge while the bumpers or triggers are in use
 const MODELS = {
 	xbox: { url: './models/xbox-controller.glb', ModelClass: XboxControllerModel, topAngle: 1.2 },
-	playstation: { url: './models/dualshock-controller.glb', ModelClass: DualShockControllerModel, topAngle: 0.6 },
+	playstation: { url: './models/dualshock-controller.glb', ModelClass: DualShockControllerModel, topAngle: 1.45 },
 };
+const DEFAULT_BRAND = 'xbox';
 
-// how much the pushes tilt the controller
+// up to four controllers shown at once, each in a cell of this size, two to a row past two
+const MAX_SHOWN = 4;
+const CELL_WIDTH = 1.1;
+const CELL_HEIGHT = 0.8;
+const LAYOUT_TIME = 0.3;
+
+// four player dots under each controller, the first N lit for player N
+const DOT_GEOMETRY = new SphereGeometry( 0.005, 16, 8 );
+const DOT_LIT = new MeshBasicMaterial( { color: 0xffffff } );
+const DOT_UNLIT = new MeshBasicMaterial( { color: 0x3a3f44 } );
+const DOT_SPACING = 0.022;
+const DOTS_BELOW = 0.34;
+
+// how much the pushes tilt a controller
 const TILT = 0.1;
+
+// each shown controller sways from its own phase, stepped by the golden ratio of the slowest sway's
+// period so no two line up in any of the sways
+const SWAY_STEP = 4 * Math.PI * ( Math.sqrt( 5 ) - 1 ) / 2;
 
 // the bumpers and triggers, how long after they're let go the view tips back, and roughly how long it
 // takes to tip toward the top and back to the front, in seconds
@@ -30,14 +51,15 @@ const SHOULDER_HOLD = 1;
 const TIP_TIME = 0.3;
 const RETURN_TIME = 0.8;
 
-// how far below the view the controller waits while no gamepad is connected, roughly how long it
-// takes to slide in, and how long to slide out, in seconds
-const HIDDEN_Y = - 1.1;
+// how far below its place a controller waits before sliding in, how far back it's pushed while
+// sliding so it passes behind the others, roughly how long it takes to slide in, and how long to
+// slide out, in seconds
+const HIDDEN_Y = - 1.6;
+const HIDDEN_Z = - 0.6;
 const SLIDE_TIME = 0.2;
 const EXIT_TIME = 0.4;
 
 const _torque = new Vector3();
-const _tilt = new Vector3();
 const _axis = new Vector3();
 
 // camera
@@ -55,76 +77,161 @@ const scene = new Scene();
 scene.background = new Color( 0x131619 );
 scene.environment = new PMREMGenerator( renderer ).fromScene( new RoomEnvironment() ).texture;
 
-// the controller sways in this group and tilts within it
-const sway = new Group();
-scene.add( sway );
+// all the controllers, scaled together to fit the view
+const stage = new Group();
+const stageScale = { value: 1, velocity: 0 };
+scene.add( stage );
 
-// input: show the model for the connected controller's brand
+// one display per controller shown: a connected gamepad, or a dummy with no gamepad. Each sways in
+// its own group, positioned in the layout, while its model tilts within it
+const displays = [];
+let dummyCount = 0;
+let lastShownCount = - 1;
+
+function addDisplay( controller, brand ) {
+
+	brand = brand in MODELS ? brand : DEFAULT_BRAND;
+	const display = {
+		controller,
+		brand,
+		model: null,
+		group: new Group(),
+		dots: new Group(),
+		player: 1,
+		shown: true,
+		x: { value: 0, velocity: 0 },
+		y: { value: 0, velocity: 0 },
+		tip: { value: 0, velocity: 0 },
+		slide: { value: HIDDEN_Y, velocity: 0, exitStart: - 1, exitFrom: 0 },
+		tilt: new Vector3(),
+		lastShoulderTime: - Infinity,
+		swayIndex: freeSwayIndex(),
+	};
+
+	// connected gamepads come first, in slot order, then dummies
+	let index = displays.length;
+	if ( controller ) {
+
+		const slot = manager.controllers.indexOf( controller );
+		index = displays.findIndex( d => ! d.controller || manager.controllers.indexOf( d.controller ) > slot );
+		if ( index === - 1 ) index = displays.length;
+
+	}
+
+	displays.splice( index, 0, display );
+	stage.add( display.group, display.dots );
+
+	for ( let i = 0; i < MAX_SHOWN; i ++ ) {
+
+		const dot = new Mesh( DOT_GEOMETRY, DOT_UNLIT );
+		dot.position.x = ( i - ( MAX_SHOWN - 1 ) / 2 ) * DOT_SPACING;
+		display.dots.add( dot );
+
+	}
+
+	loadModel( brand ).then( model => {
+
+		display.model = model;
+		display.group.add( model );
+
+	} );
+
+	// start in its place in the layout so it slides straight up
+	layout();
+	display.x.value = display.x.target;
+	display.y.value = display.y.target;
+
+}
+
+// slides a display out of view; it's removed once gone ( see updateDisplay )
+function hideDisplay( display ) {
+
+	display.shown = false;
+
+}
+
+function countShown() {
+
+	let count = 0;
+	for ( let i = 0, l = displays.length; i < l; i ++ ) if ( displays[ i ].shown ) count ++;
+	return count;
+
+}
+
+// the lowest sway index no shown display is using
+function freeSwayIndex() {
+
+	let index = 0;
+	while ( displays.some( d => d.shown && d.swayIndex === index ) ) index ++;
+	return index;
+
+}
+
+// the last dummy still shown, or null
+function lastDummy() {
+
+	for ( let i = displays.length - 1; i >= 0; i -- ) {
+
+		if ( ! displays[ i ].controller && displays[ i ].shown ) return displays[ i ];
+
+	}
+
+	return null;
+
+}
+
+// a new copy of a brand's model, loading the file once
+const loaded = {};
+function loadModel( brand ) {
+
+	const { url, ModelClass } = MODELS[ brand ];
+	if ( ! loaded[ brand ] ) loaded[ brand ] = new GLTFLoader().loadAsync( url );
+	return loaded[ brand ].then( gltf => new ModelClass( gltf.scene.clone() ) );
+
+}
+
+// input: a display for each connected gamepad, making room by removing a dummy if needed
 const timer = new Timer();
 const status = document.getElementById( 'status' );
 const manager = new ControllerManager();
 window.manager = manager;
 manager.addEventListener( 'connected', e => {
 
-	if ( e.slot !== 0 ) return;
-	status.textContent = e.controller.id;
-	showModel( e.controller.brand );
+	if ( countShown() >= MAX_SHOWN ) {
+
+		const dummy = lastDummy();
+		if ( ! dummy ) return;
+		hideDisplay( dummy );
+
+	}
+
+	addDisplay( e.controller, e.controller.brand );
 
 } );
 
 manager.addEventListener( 'disconnected', e => {
 
-	if ( e.slot !== 0 ) return;
-	status.textContent = 'Plug in a controller and press a button';
-	hideModel();
+	const display = displays.find( d => d.controller === e.controller && d.shown );
+	if ( display ) hideDisplay( display );
 
 } );
 
-// the model for the gamepad in slot 0, which slides up into view while one is connected and back down
-// out of view when it disconnects, keeping each loaded model to switch back to
-let model = null;
-let shown = false;
-let shownBrand = null;
-let lastShoulderTime = - Infinity;
+// up and down add and remove dummy controllers, alternating brands
+manager.getKeyboard().addEventListener( 'pressed', e => {
 
-// the current tip toward the top and slide into view, and how fast each is moving. A slide out
-// records when it started and from where
-const tip = { value: 0, velocity: 0 };
-const slide = { value: HIDDEN_Y, velocity: 0, exitStart: - 1, exitFrom: 0 };
-const loaded = {};
-const DEFAULT_BRAND = 'xbox';
+	if ( e.name === 'ArrowUp' && countShown() < MAX_SHOWN ) {
 
-// slides the model out of view, removing it once it's gone ( see animate )
-function hideModel() {
+		addDisplay( null, dummyCount % 2 === 0 ? 'xbox' : 'playstation' );
+		dummyCount ++;
 
-	shown = false;
+	} else if ( e.name === 'ArrowDown' ) {
 
-}
-
-function showModel( brand ) {
-
-	brand = brand in MODELS ? brand : DEFAULT_BRAND;
-	shown = true;
-	shownBrand = brand;
-	if ( ! loaded[ brand ] ) {
-
-		const { url, ModelClass } = MODELS[ brand ];
-		loaded[ brand ] = new GLTFLoader()
-			.loadAsync( url )
-			.then( gltf => new ModelClass( gltf.scene ) );
+		const dummy = lastDummy();
+		if ( dummy ) hideDisplay( dummy );
 
 	}
 
-	loaded[ brand ].then( controllerModel => {
-
-		if ( ! shown || shownBrand !== brand || model === controllerModel ) return;
-		if ( model ) sway.remove( model );
-		model = controllerModel;
-		sway.add( model );
-
-	} );
-
-}
+} );
 
 onResize();
 window.addEventListener( 'resize', onResize );
@@ -137,26 +244,112 @@ function animate( timestamp ) {
 
 	const delta = timer.getDelta();
 	const time = timer.getElapsed();
-	const pad = manager.getController( 0 );
-	if ( model && pad ) {
 
-		// show the gamepad in slot 0, which reads as released once disconnected
-		model.setFromController( pad );
+	layout();
+	smoothDamp( stageScale, stageScale.target, LAYOUT_TIME, delta );
+	stage.scale.setScalar( stageScale.value );
+
+	// backwards, since displays that have slid out are removed
+	for ( let i = displays.length - 1; i >= 0; i -- ) updateDisplay( displays[ i ], time, delta );
+
+	const shownCount = countShown();
+	if ( shownCount !== lastShownCount ) {
+
+		status.textContent = shownCount === 0 ? 'Plug in a controller and press a button' : '';
+		lastShownCount = shownCount;
+
+	}
+
+	renderer.render( scene, camera );
+
+}
+
+// sets each shown display's target place, in a row of up to two or a grid of two rows, and the
+// stage scale that fits them in the view
+function layout() {
+
+	const count = countShown();
+	const columns = Math.min( count, 2 );
+	const rows = Math.ceil( count / 2 );
+
+	let index = 0;
+	let dummyPlayer = 1;
+	for ( let i = 0, l = displays.length; i < l; i ++ ) {
+
+		const display = displays[ i ];
+		if ( ! display.shown ) continue;
+
+		// an odd one out in the last row is centered
+		const row = Math.floor( index / columns );
+		const inRow = Math.min( columns, count - row * columns );
+		const column = index % columns;
+		display.x.target = ( column - ( inRow - 1 ) / 2 ) * CELL_WIDTH;
+		display.y.target = ( ( rows - 1 ) / 2 - row ) * CELL_HEIGHT;
+		index ++;
+
+		// connected gamepads show their manager slot, which comes first, and dummies the numbers left
+		if ( display.controller ) {
+
+			display.player = manager.controllers.indexOf( display.controller ) + 1;
+
+		} else {
+
+			while ( isGamepadPlayer( dummyPlayer ) ) dummyPlayer ++;
+			display.player = dummyPlayer ++;
+
+		}
+
+	}
+
+	// the visible area at the controllers' distance from the camera, with a margin
+	const distance = camera.position.length();
+	const height = 2 * distance * Math.tan( camera.fov * Math.PI / 360 ) * 0.85;
+	const width = height * camera.aspect;
+	stageScale.target = count === 0 ? 1 : Math.min( 1, width / ( columns * CELL_WIDTH ), height / ( rows * CELL_HEIGHT ) );
+
+}
+
+// whether a shown gamepad's display has player number "player"
+function isGamepadPlayer( player ) {
+
+	for ( let i = 0, l = displays.length; i < l; i ++ ) {
+
+		const display = displays[ i ];
+		if ( display.shown && display.controller && display.player === player ) return true;
+
+	}
+
+	return false;
+
+}
+
+// moves, sways, tips and slides one display, and shows its gamepad's buttons
+function updateDisplay( display, time, delta ) {
+
+	const { controller, model, group, tip, slide, tilt } = display;
+
+	smoothDamp( display.x, display.x.target, LAYOUT_TIME, delta );
+	smoothDamp( display.y, display.y.target, LAYOUT_TIME, delta );
+
+	if ( model && controller ) {
+
+		// show the gamepad, which reads as released once disconnected
+		model.setFromController( controller );
 
 		// note when the bumpers or triggers were last in use
 		for ( let i = 0, l = SHOULDER_BUTTONS.length; i < l; i ++ ) {
 
-			if ( pad.getAxis( SHOULDER_BUTTONS[ i ] ) > 0.05 ) lastShoulderTime = time;
+			if ( controller.getAxis( SHOULDER_BUTTONS[ i ] ) > 0.05 ) display.lastShoulderTime = time;
 
 		}
 
 		// ease toward the tilt from the current pushes, the same at any frame rate
-		_tilt.lerp( model.getTilt( _torque ), 1 - Math.exp( - 12 * delta ) );
+		tilt.lerp( model.getTilt( _torque ), 1 - Math.exp( - 12 * delta ) );
 
-		const angle = _tilt.length() * TILT;
+		const angle = tilt.length() * TILT;
 		if ( angle > 0 ) {
 
-			model.quaternion.setFromAxisAngle( _axis.copy( _tilt ).normalize(), angle );
+			model.quaternion.setFromAxisAngle( _axis.copy( tilt ).normalize(), angle );
 
 		} else {
 
@@ -168,17 +361,16 @@ function animate( timestamp ) {
 
 	// tip the controller to show its top while the bumpers or triggers are in use, easing slowly back
 	// to the front view a moment after they're let go
-	const target = model && time - lastShoulderTime < SHOULDER_HOLD ? MODELS[ shownBrand ].topAngle : 0;
+	const target = time - display.lastShoulderTime < SHOULDER_HOLD ? MODELS[ display.brand ].topAngle : 0;
 	smoothDamp( tip, target, target > 0 ? TIP_TIME : RETURN_TIME, delta );
 
-	// slide the model up into view while a gamepad is connected, once it's loaded. On the way out it
-	// eases in, starting slowly and leaving at speed, and is removed once it's gone
-	if ( shown && model ) {
+	// slide up into place once loaded. On the way out it eases in, starting slowly and leaving at
+	// speed, and is removed once gone
+	if ( display.shown ) {
 
-		slide.exitStart = - 1;
-		smoothDamp( slide, 0, SLIDE_TIME, delta );
+		if ( model ) smoothDamp( slide, 0, SLIDE_TIME, delta );
 
-	} else if ( model ) {
+	} else {
 
 		if ( slide.exitStart < 0 ) {
 
@@ -187,26 +379,33 @@ function animate( timestamp ) {
 
 		}
 
-		// keep the speed, so a controller reconnecting mid-exit turns it around smoothly
 		const t = Math.min( ( time - slide.exitStart ) / EXIT_TIME, 1 );
-		const previous = slide.value;
 		slide.value = slide.exitFrom + ( HIDDEN_Y - slide.exitFrom ) * t * t * t;
-		slide.velocity = delta > 0 ? ( slide.value - previous ) / delta : 0;
 		if ( t === 1 ) {
 
-			sway.remove( model );
-			model = null;
-			slide.exitStart = - 1;
+			stage.remove( group, display.dots );
+			displays.splice( displays.indexOf( display ), 1 );
 
 		}
 
 	}
 
-	sway.rotation.y = 0.25 * Math.sin( time * 0.5 );
-	sway.rotation.x = tip.value + 0.08 * Math.sin( time * 0.7 );
-	sway.position.y = slide.value + 0.02 * Math.sin( time );
+	// pushed fully back over the lower half of the slide, coming forward over the upper half
+	const z = HIDDEN_Z * Math.min( 1, 2 * slide.value / HIDDEN_Y );
 
-	renderer.render( scene, camera );
+	const phase = display.swayIndex * SWAY_STEP;
+	group.position.set( display.x.value, display.y.value + slide.value + 0.02 * Math.sin( time + phase ), z );
+	group.rotation.y = 0.25 * Math.sin( ( time + phase ) * 0.5 );
+	group.rotation.x = tip.value + 0.08 * Math.sin( ( time + phase ) * 0.7 );
+
+	// the player dots stay level under the controller
+	const dots = display.dots;
+	dots.position.set( display.x.value, display.y.value + slide.value - DOTS_BELOW, z );
+	for ( let i = 0, l = dots.children.length; i < l; i ++ ) {
+
+		dots.children[ i ].material = i < display.player ? DOT_LIT : DOT_UNLIT;
+
+	}
 
 }
 

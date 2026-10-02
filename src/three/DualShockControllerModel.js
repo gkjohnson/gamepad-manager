@@ -2,9 +2,11 @@
 import { Vector3 } from 'three';
 import { ControllerModel } from './ControllerModel.js';
 
-const PRESS = new Vector3( 0, 0, - 1 );
-const BUMPER = new Vector3( 0, - 1, 0 );
-const TRIGGER = new Vector3( 0, - 0.5, 1 ).normalize();
+// the model's face is tilted like the Xbox model's, so its "into the face" and "down toward the
+// grips" aren't axis aligned
+const PRESS = new Vector3( 0, - 0.75, - 0.66 ).normalize();
+const BUMPER = new Vector3( 0, - 0.66, 0.75 ).normalize();
+const TRIGGER = new Vector3( 0, 0.42, 1.04 ).normalize();
 
 /**
  * A PlayStation DualShock 4 controller model, for `example/models/dualshock-controller.glb`. Its

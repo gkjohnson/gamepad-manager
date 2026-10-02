@@ -89,6 +89,6 @@ Both are CC BY 4.0 and credited in the README. The credit for any model shown mu
 
 - Source: [DualShock 4 PlayStation Controller](https://sketchfab.com/3d-models/dualshock-4-playstation-controller-e3c2f0dc16524fc19cdde45bad1de1a9) by [shaielwolf](https://sketchfab.com/shaielwolf).
 - The download has 8 meshes ( front and back shells, touchpad, joysticks, buttons, triggers, headphone jack, screws and USB ), each already split into separate pieces. Moving parts became their own nodes, named by position, with pivots at their centers: `button_south` / `east` / `west` / `north`, `button_select` ( Share ), `button_start` ( Options ), `button_home` ( PS ), `dpad_up` / `down` / `left` / `right` ( separate arrows ), `stick_left` / `right` ( one piece each ), `bumper_left` / `right`, `trigger_left` / `right`, `touchpad`. The static pieces of each mesh merged into `body_front`, `body_back`, `shoulder_strips` ( the strip between each bumper and trigger, which isn't part of either ), `headphone_jack` and `screws_usb`.
-- Centered and scaled to the Xbox model's width ( 0.824 ). The face points along +z.
+- Centered, scaled to the Xbox model's width ( 0.824 ) and leaned back to the Xbox model's angle, its face along ( 0, 0.75, 0.66 ).
 - Compressed with gltf-transform: `prune`, `dedup`, `resize` ( 4096 textures to 1024 ), `quantize`, `webp`. Only the first UV set kept. No Draco or meshopt.
 - Like the Xbox model, the processing script is not in the repo.
