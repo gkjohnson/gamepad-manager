@@ -7,35 +7,26 @@ import { MouseController } from './MouseController.js';
 
 const _empty = [];
 
-// how long, in milliseconds, a new gamepad matching a connected controller waits for that controller
-// to disconnect before it's taken to be a second controller of the same model
+// how long a new gamepad waits for a connected one of the same model to disconnect, in ms
 const RECONNECT_WINDOW = 1000;
 
 /**
- * Fired during `update` when a gamepad connects. The event object is reused, so copy any fields to
- * keep.
+ * Fired when a gamepad connects. The event object is reused.
  * @event ControllerManager#connected
  * @property {GamepadController} controller
  * @property {number} slot
  */
 
 /**
- * Fired during `update` when a gamepad disconnects. The controller stays in its slot. The event
- * object is reused, so copy any fields to keep.
+ * Fired when a gamepad disconnects. The event object is reused.
  * @event ControllerManager#disconnected
  * @property {GamepadController} controller
  * @property {number} slot
  */
 
 /**
- * Tracks connected gamepads in stable slots and gives access to the keyboard and mouse. Call
- * `update` once per frame to read every device's latest state.
- *
- * A connected gamepad never changes slot. A newly connected one takes a free slot that last held
- * the same model if there is one, so a controller that's unplugged and plugged back in returns to
- * its slot, and otherwise the lowest free slot. Browsers can report a plugged back in controller
- * before dropping its old entry, so a new gamepad of the same model as a connected one waits up to a
- * second for that one to disconnect before getting a slot of its own.
+ * Tracks gamepads in stable slots and gives access to the keyboard and mouse. Call `update` once
+ * per frame. A reconnected gamepad returns to its old slot.
  *
  * @note Browsers don't expose a gamepad until a button is pressed on it.
  * @extends EventDispatcher
@@ -47,16 +38,13 @@ export class ControllerManager extends EventDispatcher {
 		super();
 
 		/**
-		 * Gamepads by slot. Each stays in its slot after disconnecting, with `connected` false, so
-		 * references to it remain valid and it's reused if the slot is filled again.
+		 * Gamepads by slot, kept after disconnecting.
 		 * @type {Array<GamepadController>}
 		 */
 		this.controllers = [];
 
 		/**
-		 * The device that most recently had a button pressed, a stick or axis moved, or, for the mouse,
-		 * moved, e.g. for switching on-screen prompts between keyboard and gamepad. Null until then.
-		 * Kept after a gamepad disconnects.
+		 * The device used most recently, e.g. for picking which button prompts to show.
 		 * @type {Controller|null}
 		 */
 		this.lastActive = null;
@@ -69,8 +57,7 @@ export class ControllerManager extends EventDispatcher {
 	}
 
 	/**
-	 * The gamepad in a slot, or null if no gamepad has used the slot yet. Check `connected`, since
-	 * a gamepad stays in its slot after disconnecting.
+	 * The gamepad in a slot, or null. Check `connected` before using it.
 	 * @param {number} slot
 	 * @returns {GamepadController|null}
 	 */
@@ -81,8 +68,7 @@ export class ControllerManager extends EventDispatcher {
 	}
 
 	/**
-	 * The keyboard, created and listening for key events from the first call on. Updated by
-	 * `update` along with the gamepads.
+	 * The keyboard, created on the first call.
 	 * @returns {KeyboardController}
 	 */
 	getKeyboard() {
@@ -93,8 +79,7 @@ export class ControllerManager extends EventDispatcher {
 	}
 
 	/**
-	 * The mouse, created and listening for mouse events from the first call on. Updated by
-	 * `update` along with the gamepads.
+	 * The mouse, created on the first call.
 	 * @returns {MouseController}
 	 */
 	getMouse() {
@@ -105,7 +90,7 @@ export class ControllerManager extends EventDispatcher {
 	}
 
 	/**
-	 * Detects gamepads connecting and disconnecting, and updates every device. Call once per frame.
+	 * Updates every device. Call once per frame.
 	 */
 	update() {
 
@@ -117,7 +102,7 @@ export class ControllerManager extends EventDispatcher {
 			const controller = controllers[ i ];
 			if ( ! controller.connected ) continue;
 
-			const gamepad = gamepads[ controller.index ];
+			const gamepad = gamepads[ controller._index ];
 			if ( ! gamepad || ! gamepad.connected || gamepad.id !== controller.id ) {
 
 				controller.disconnect();
@@ -145,8 +130,7 @@ export class ControllerManager extends EventDispatcher {
 			const gamepad = gamepads[ i ];
 			if ( ! gamepad || ! gamepad.connected || this._isTracked( gamepad.index ) ) continue;
 
-			// a gamepad of the same model as a connected controller may be that controller plugged
-			// back in before the browser drops its old entry, so it waits for that one to disconnect
+			// may be a connected controller plugged back in before the browser drops its old entry
 			if ( this._isModelConnected( gamepad.id ) ) {
 
 				if ( ! pending.has( gamepad.index ) ) pending.set( gamepad.index, now );
@@ -165,7 +149,7 @@ export class ControllerManager extends EventDispatcher {
 		for ( let i = 0, l = controllers.length; i < l; i ++ ) {
 
 			const controller = controllers[ i ];
-			if ( controller.connected ) this._updateController( controller, gamepads[ controller.index ] );
+			if ( controller.connected ) this._updateController( controller, gamepads[ controller._index ] );
 
 		}
 
@@ -175,8 +159,7 @@ export class ControllerManager extends EventDispatcher {
 	}
 
 	/**
-	 * Removes disconnected gamepads and moves connected ones down, in order, to fill the slots from
-	 * 0. A gamepad plugged back in after this no longer returns to the slot it left.
+	 * Removes disconnected gamepads and moves the rest down to fill the slots from 0.
 	 */
 	reassignSlots() {
 
@@ -184,7 +167,17 @@ export class ControllerManager extends EventDispatcher {
 		let slot = 0;
 		for ( let i = 0, l = controllers.length; i < l; i ++ ) {
 
-			if ( controllers[ i ].connected ) controllers[ slot ++ ] = controllers[ i ];
+			const controller = controllers[ i ];
+			if ( controller.connected ) {
+
+				controller.slot = slot;
+				controllers[ slot ++ ] = controller;
+
+			} else {
+
+				controller.slot = - 1;
+
+			}
 
 		}
 
@@ -215,7 +208,7 @@ export class ControllerManager extends EventDispatcher {
 		const { controllers } = this;
 		for ( let i = 0, l = controllers.length; i < l; i ++ ) {
 
-			if ( controllers[ i ].connected && controllers[ i ].index === index ) return true;
+			if ( controllers[ i ].connected && controllers[ i ]._index === index ) return true;
 
 		}
 
@@ -252,8 +245,10 @@ export class ControllerManager extends EventDispatcher {
 
 		if ( free !== - 1 ) return free;
 
-		controllers.push( new GamepadController() );
-		return controllers.length - 1;
+		const controller = new GamepadController();
+		controller.slot = controllers.length;
+		controllers.push( controller );
+		return controller.slot;
 
 	}
 

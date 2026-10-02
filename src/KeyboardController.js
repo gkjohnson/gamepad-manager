@@ -1,7 +1,6 @@
 import { Controller } from './Controller.js';
 
-// printed names for codes the general rule in getButtonName doesn't read well, with a US layout's
-// characters for the punctuation keys
+// printed names the general rule in getButtonName gets wrong, on a US layout
 const KEY_NAMES = {
 	Backquote: '`',
 	Minus: '-',
@@ -24,10 +23,7 @@ const KEY_NAMES = {
 };
 
 /**
- * The keyboard. Buttons are named by `KeyboardEvent.code`, the physical key position ( `KeyW`,
- * `Space`, `ArrowUp` ), so they stay put on any layout. A key tapped between two updates still
- * reads as pressed for one update. Held keys are released when the window loses focus. Get it from
- * `ControllerManager.getKeyboard`.
+ * The keyboard, with buttons named by `KeyboardEvent.code`, like `KeyW`.
  * @extends Controller
  */
 export class KeyboardController extends Controller {
@@ -41,7 +37,7 @@ export class KeyboardController extends Controller {
 		this._down = new Set();
 		this._tapped = new Set();
 
-		// printed names by code, and the user's keyboard layout where the browser exposes it
+		// cached printed names, and the user's keyboard layout where available
 		this._names = new Map();
 		this._layoutMap = null;
 		if ( navigator.keyboard && navigator.keyboard.getLayoutMap ) {
@@ -89,9 +85,7 @@ export class KeyboardController extends Controller {
 	}
 
 	/**
-	 * The key's printed name, e.g. `'W'` for `KeyW`, `'Left Shift'` for `ShiftLeft` and `'Page Up'`
-	 * for `PageUp`. Letter, number and punctuation keys follow the user's layout in browsers that
-	 * expose it ( `navigator.keyboard.getLayoutMap` ), and a US layout otherwise.
+	 * The key's printed name, e.g. `'W'` for `KeyW`, following the user's layout where available.
 	 * @param {string} name
 	 * @returns {string}
 	 */
@@ -145,7 +139,7 @@ export class KeyboardController extends Controller {
 	}
 
 	/**
-	 * Removes the window event listeners. Called by `ControllerManager.dispose`.
+	 * Removes the window event listeners.
 	 * @private
 	 */
 	dispose() {

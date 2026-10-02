@@ -2,12 +2,14 @@
 /** @import { Controller } from '../Controller.js' */
 import { Box3, Group, Vector3 } from 'three';
 
-// how far parts move when fully pressed, in model units ( the models are about 0.82 wide ), or
-// rotate, in radians
+// how far parts move or rotate when fully pressed
 const PRESS_DEPTH = 0.006;
-const DPAD_ANGLE = 0.12;
 const STICK_ANGLE = 0.35;
 const TRIGGER_ANGLE = 0.3;
+
+// directions buttons and bumpers move when pressed
+const PRESS = new Vector3( 0, - 1, 0 );
+const BUMPER = new Vector3( 0, 0, 1 );
 
 // controller button names and the model parts they press
 const BUTTONS = [
@@ -29,7 +31,6 @@ const BUTTONS = [
 	[ 'dpad-left', 'dpad_left' ],
 	[ 'dpad-right', 'dpad_right' ],
 ];
-const DPAD_BUTTONS = [ 'dpad-up', 'dpad-down', 'dpad-left', 'dpad-right' ];
 
 // stick axes, their stick part and the button that presses it
 const STICKS = [
@@ -50,38 +51,22 @@ const _rotation = new Vector3();
 const _axis = new Vector3();
 
 /**
- * @typedef {Object} ControllerModelSettings
- * @property {Vector3} press - Direction into the controller's face, for face buttons, the d-pad and
- * stick presses.
- * @property {Vector3} bumper - Direction bumpers move when pressed.
- * @property {Vector3} trigger - Direction a pulled trigger pushes the controller, for `getTilt`.
- * Triggers themselves swing about their top front edge.
- * @property {boolean} dpadRocks - Whether the d-pad is one piece that rocks toward the pressed
- * direction ( a `dpad` part ) rather than four separate buttons ( `dpad_up` and so on ).
- */
-
-/**
- * A 3D controller whose buttons, triggers, d-pad and sticks move to show a controller's state. Wraps
- * a loaded model with a node per moving part, named by position: `button_south`, `button_east`,
- * `button_west`, `button_north`, `button_select`, `button_start`, `button_home`, `bumper_left` /
- * `right`, `trigger_left` / `right`, `stick_left` / `right` and `dpad`, or `dpad_up` / `down` /
- * `left` / `right`. The model lies face up, its sticks along +y and its top edge toward -z. Sticks
- * tilt about their node's origin, which should be the center of the ball at their base. Use a
- * subclass for a specific controller model.
+ * Base class for the 3D controller models.
  * @extends Group
  */
 export class ControllerModel extends Group {
 
 	/**
 	 * @param {Object3D} scene - The loaded model.
-	 * @param {ControllerModelSettings} settings
 	 */
-	constructor( scene, settings ) {
+	constructor( scene ) {
 
 		super();
 
-		const { press, bumper, trigger, dpadRocks } = settings;
 		this.add( scene );
+
+		// direction a pulled trigger tips the controller, set by each subclass
+		this._triggerDirection = new Vector3( 0, 1, 0 );
 
 		this._values = {};
 		this._buttons = [];
@@ -89,9 +74,9 @@ export class ControllerModel extends Group {
 		this._triggers = [];
 		this._right = new Vector3( 1, 0, 0 );
 		this._left = new Vector3( - 1, 0, 0 );
-		this._down = new Vector3().crossVectors( press, this._right );
+		this._down = new Vector3().crossVectors( PRESS, this._right );
 
-		// sticks tilt about their node's origin, the center of the ball at their base
+		// sticks tilt about their origin
 		const pivots = {};
 		for ( const { x, y, part: partName, button } of STICKS ) {
 
@@ -103,8 +88,7 @@ export class ControllerModel extends Group {
 
 		}
 
-		// triggers swing about a hinge along their top front edge, on the face side ( +y ) toward the
-		// top ( -z )
+		// triggers swing about a hinge along their top front edge
 		scene.updateMatrixWorld( true );
 		for ( const [ name, partName ] of TRIGGERS ) {
 
@@ -126,27 +110,22 @@ export class ControllerModel extends Group {
 
 		}
 
-		// each button's part, rest position, and press direction and distance
+		// each button's part, rest position and press motion
 		for ( const [ name, partName ] of BUTTONS ) {
 
-			const isDpad = DPAD_BUTTONS.includes( name );
-			const part = pivots[ name ] || scene.getObjectByName( isDpad && dpadRocks ? 'dpad' : partName );
+			const part = pivots[ name ] || scene.getObjectByName( partName );
 			if ( ! part ) continue;
 
-			let direction = press;
+			let direction = PRESS;
 			let depth = PRESS_DEPTH;
 			if ( /trigger/.test( name ) ) {
 
-				direction = trigger;
+				direction = this._triggerDirection;
 				depth = 0;
 
 			} else if ( /bumper/.test( name ) ) {
 
-				direction = bumper;
-
-			} else if ( isDpad && dpadRocks ) {
-
-				depth = 0;
+				direction = BUMPER;
 
 			}
 
@@ -155,20 +134,10 @@ export class ControllerModel extends Group {
 
 		}
 
-		// a rocking d-pad turns about the axis that dips the pressed edge into the face
-		this._dpad = dpadRocks ? scene.getObjectByName( 'dpad' ) : null;
-		this._dpadAxes = {
-			'dpad-up': this._right.clone().negate(),
-			'dpad-down': this._right.clone(),
-			'dpad-left': this._down.clone(),
-			'dpad-right': this._down.clone().negate(),
-		};
-
 	}
 
 	/**
-	 * Shows a button pressed by `value`, from 0 for released to 1 for fully pressed. Analog buttons
-	 * like triggers can take values in between. Button names are the same as `GamepadController`'s.
+	 * Shows a button pressed, from 0 to 1.
 	 * @param {string} name
 	 * @param {number} value
 	 */
@@ -199,25 +168,10 @@ export class ControllerModel extends Group {
 
 		}
 
-		if ( this._dpad && DPAD_BUTTONS.includes( name ) ) {
-
-			_rotation.set( 0, 0, 0 );
-			for ( let i = 0, l = DPAD_BUTTONS.length; i < l; i ++ ) {
-
-				const dpadName = DPAD_BUTTONS[ i ];
-				_rotation.addScaledVector( this._dpadAxes[ dpadName ], this._values[ dpadName ] );
-
-			}
-
-			rotate( this._dpad, _rotation, DPAD_ANGLE );
-
-		}
-
 	}
 
 	/**
-	 * Shows a stick pushed: `left-x`, `left-y`, `right-x` or `right-y`, from -1 to 1 with -1 left or
-	 * up, as `GamepadController.getAxis` reports them.
+	 * Shows a stick axis pushed, from -1 to 1.
 	 * @param {string} name
 	 * @param {number} value
 	 */
@@ -233,7 +187,7 @@ export class ControllerModel extends Group {
 
 				_rotation.copy( this._right ).multiplyScalar( this._values[ y ] || 0 );
 				_rotation.addScaledVector( this._down, - ( this._values[ x ] || 0 ) );
-				rotate( pivot, _rotation, STICK_ANGLE );
+				this._rotatePart( pivot, _rotation, STICK_ANGLE );
 
 			}
 
@@ -242,7 +196,7 @@ export class ControllerModel extends Group {
 	}
 
 	/**
-	 * Shows a controller's current buttons and sticks.
+	 * Shows a controller's current state.
 	 * @param {Controller} controller
 	 */
 	setFromController( controller ) {
@@ -265,9 +219,7 @@ export class ControllerModel extends Group {
 	}
 
 	/**
-	 * Gets the turning force the current presses would apply to the controller, as if each were a
-	 * finger pushing at that part. Its direction is the axis to tilt about and its length how much,
-	 * e.g. for tilting the model slightly as buttons are pressed.
+	 * Gets the turning force the current presses apply to the controller, for tilting it slightly.
 	 * @param {Vector3} target
 	 * @returns {Vector3}
 	 */
@@ -296,6 +248,22 @@ export class ControllerModel extends Group {
 
 	}
 
+	// rotates a part about "rotation" by its length times "scale"
+	_rotatePart( object, rotation, scale ) {
+
+		const angle = rotation.length() * scale;
+		if ( angle > 0 ) {
+
+			object.quaternion.setFromAxisAngle( _axis.copy( rotation ).normalize(), angle );
+
+		} else {
+
+			object.quaternion.identity();
+
+		}
+
+	}
+
 }
 
 // adds the turning force of pushing at "position" along "direction"
@@ -305,21 +273,5 @@ function addTorque( target, position, direction, amount ) {
 	_force.copy( direction ).multiplyScalar( amount );
 	_torque.crossVectors( position, _force );
 	target.add( _torque );
-
-}
-
-// rotates an object about "rotation" by its length times "scale"
-function rotate( object, rotation, scale ) {
-
-	const angle = rotation.length() * scale;
-	if ( angle > 0 ) {
-
-		object.quaternion.setFromAxisAngle( _axis.copy( rotation ).normalize(), angle );
-
-	} else {
-
-		object.quaternion.identity();
-
-	}
 
 }

@@ -1,12 +1,10 @@
 /**
- * Minimal event dispatcher, following three.js's `EventDispatcher`. Events are plain objects with a
- * `type`, so dispatchers can reuse one event object instead of allocating per dispatch.
+ * Minimal event dispatcher, following three.js's `EventDispatcher`.
  */
 export class EventDispatcher {
 
 	/**
-	 * Adds a listener called with the event object whenever an event of this type fires. Adding the
-	 * same listener twice has no effect.
+	 * Adds a listener for an event type.
 	 * @param {string} type
 	 * @param {Function} listener
 	 */
@@ -47,7 +45,7 @@ export class EventDispatcher {
 	}
 
 	/**
-	 * Removes a listener. Safe to call from inside a listener while its event is dispatching.
+	 * Removes a listener.
 	 * @param {string} type
 	 * @param {Function} listener
 	 */
@@ -74,8 +72,8 @@ export class EventDispatcher {
 	}
 
 	/**
-	 * Calls every listener registered for `event.type`, with `event.target` set to this dispatcher.
-	 * @param {Object} event - A plain object with a `type` string and any other fields.
+	 * Calls every listener for `event.type`.
+	 * @param {Object} event
 	 */
 	dispatchEvent( event ) {
 

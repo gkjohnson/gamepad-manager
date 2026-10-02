@@ -11,8 +11,7 @@ _empty
 
 ## EventDispatcher
 
-Minimal event dispatcher, following three.js's `EventDispatcher`. Events are plain objects with a
-`type`, so dispatchers can reuse one event object instead of allocating per dispatch.
+Minimal event dispatcher, following three.js's `EventDispatcher`.
 
 
 ### .addEventListener
@@ -21,8 +20,7 @@ Minimal event dispatcher, following three.js's `EventDispatcher`. Events are pla
 addEventListener( type: string, listener: function ): void
 ```
 
-Adds a listener called with the event object whenever an event of this type fires. Adding the
-same listener twice has no effect.
+Adds a listener for an event type.
 
 
 ### .hasEventListener
@@ -40,7 +38,7 @@ Whether the listener is registered for this event type.
 removeEventListener( type: string, listener: function ): void
 ```
 
-Removes a listener. Safe to call from inside a listener while its event is dispatching.
+Removes a listener.
 
 
 ### .dispatchEvent
@@ -49,21 +47,15 @@ Removes a listener. Safe to call from inside a listener while its event is dispa
 dispatchEvent( event: Object ): void
 ```
 
-Calls every listener registered for `event.type`, with `event.target` set to this dispatcher.
+Calls every listener for `event.type`.
 
 
 ## ControllerManager
 
 _extends [`EventDispatcher`](#eventdispatcher)_
 
-Tracks connected gamepads in stable slots and gives access to the keyboard and mouse. Call
-`update` once per frame to read every device's latest state.
-
-A connected gamepad never changes slot. A newly connected one takes a free slot that last held
-the same model if there is one, so a controller that's unplugged and plugged back in returns to
-its slot, and otherwise the lowest free slot. Browsers can report a plugged back in controller
-before dropping its old entry, so a new gamepad of the same model as a connected one waits up to a
-second for that one to disconnect before getting a slot of its own.
+Tracks gamepads in stable slots and gives access to the keyboard and mouse. Call `update` once
+per frame. A reconnected gamepad returns to its old slot.
 
 > [!NOTE]
 > Browsers don't expose a gamepad until a button is pressed on it.
@@ -71,12 +63,10 @@ second for that one to disconnect before getting a slot of its own.
 ### events
 
 ```js
-// Fired during `update` when a gamepad connects. The event object is reused, so copy any fields to
-// keep.
+// Fired when a gamepad connects. The event object is reused.
 { type: 'connected', controller: GamepadController, slot: number }
 
-// Fired during `update` when a gamepad disconnects. The controller stays in its slot. The event
-// object is reused, so copy any fields to keep.
+// Fired when a gamepad disconnects. The event object is reused.
 { type: 'disconnected', controller: GamepadController, slot: number }
 ```
 
@@ -86,8 +76,7 @@ second for that one to disconnect before getting a slot of its own.
 controllers: Array<GamepadController>
 ```
 
-Gamepads by slot. Each stays in its slot after disconnecting, with `connected` false, so
-references to it remain valid and it's reused if the slot is filled again.
+Gamepads by slot, kept after disconnecting.
 
 
 ### .lastActive
@@ -96,9 +85,7 @@ references to it remain valid and it's reused if the slot is filled again.
 lastActive: Controller | null
 ```
 
-The device that most recently had a button pressed, a stick or axis moved, or, for the mouse,
-moved, e.g. for switching on-screen prompts between keyboard and gamepad. Null until then.
-Kept after a gamepad disconnects.
+The device used most recently, e.g. for picking which button prompts to show.
 
 
 ### .getController
@@ -107,8 +94,7 @@ Kept after a gamepad disconnects.
 getController( slot: number ): GamepadController | null
 ```
 
-The gamepad in a slot, or null if no gamepad has used the slot yet. Check `connected`, since
-a gamepad stays in its slot after disconnecting.
+The gamepad in a slot, or null. Check `connected` before using it.
 
 
 ### .getKeyboard
@@ -117,8 +103,7 @@ a gamepad stays in its slot after disconnecting.
 getKeyboard(): KeyboardController
 ```
 
-The keyboard, created and listening for key events from the first call on. Updated by
-`update` along with the gamepads.
+The keyboard, created on the first call.
 
 
 ### .getMouse
@@ -127,8 +112,7 @@ The keyboard, created and listening for key events from the first call on. Updat
 getMouse(): MouseController
 ```
 
-The mouse, created and listening for mouse events from the first call on. Updated by
-`update` along with the gamepads.
+The mouse, created on the first call.
 
 
 ### .update
@@ -137,7 +121,7 @@ The mouse, created and listening for mouse events from the first call on. Update
 update(): void
 ```
 
-Detects gamepads connecting and disconnecting, and updates every device. Call once per frame.
+Updates every device. Call once per frame.
 
 
 ### .reassignSlots
@@ -146,8 +130,7 @@ Detects gamepads connecting and disconnecting, and updates every device. Call on
 reassignSlots(): void
 ```
 
-Removes disconnected gamepads and moves connected ones down, in order, to fill the slots from
-0. A gamepad plugged back in after this no longer returns to the slot it left.
+Removes disconnected gamepads and moves the rest down to fill the slots from 0.
 
 
 ### .dispose
@@ -163,20 +146,16 @@ Removes the keyboard and mouse event listeners.
 
 _extends [`EventDispatcher`](#eventdispatcher)_
 
-Base class for an input device: named buttons and axes, queried after each `update` or listened
-to through events. Buttons are either held or not; how far an analog button is pressed is read
-with `getAxis`. Controllers are created by `ControllerManager`.
+Base class for an input device with named buttons and axes.
 
 
 ### events
 
 ```js
-// Fired during `update` when a button goes down. The event object is reused, so copy any fields to
-// keep.
+// Fired when a button goes down. The event object is reused.
 { type: 'pressed', name: string }
 
-// Fired during `update` when a button goes up. The event object is reused, so copy any fields to
-// keep.
+// Fired when a button goes up. The event object is reused.
 { type: 'released', name: string }
 ```
 
@@ -204,7 +183,7 @@ Whether the device is available. Always true for the keyboard and mouse.
 pressThreshold: number
 ```
 
-How far an analog button, such as a trigger, must be pressed to count as held.
+How far an analog button must be pressed to count as held.
 
 
 ### .releaseThreshold
@@ -213,8 +192,7 @@ How far an analog button, such as a trigger, must be pressed to count as held.
 releaseThreshold: number
 ```
 
-How far a held analog button must come back to count as released. Lower than
-`pressThreshold` so a trigger resting near it doesn't flicker.
+How far a held analog button must come back to count as released.
 
 
 ### .getButtonName
@@ -223,8 +201,7 @@ How far a held analog button must come back to count as released. Lower than
 getButtonName( name: string ): string
 ```
 
-The name printed on the device for a button, e.g. `'A'` for a gamepad's `south` or `'W'` for
-the keyboard's `KeyW`, for on-screen prompts. Implemented by each device; this returns `name`.
+The name printed on the device for a button, e.g. `'A'` or `'W'`.
 
 
 ### .getButtonHeld
@@ -233,8 +210,7 @@ the keyboard's `KeyW`, for on-screen prompts. Implemented by each device; this r
 getButtonHeld( name: string ): boolean
 ```
 
-Whether the button is down. True on every update while held, including the one it went down.
-Analog buttons count as held from `pressThreshold` until they drop below `releaseThreshold`.
+Whether the button is down.
 
 
 ### .getButtonPressed
@@ -243,8 +219,7 @@ Analog buttons count as held from `pressThreshold` until they drop below `releas
 getButtonPressed( name: string ): boolean
 ```
 
-Whether the button went down in the last update. True for one update per press, unlike
-`getButtonHeld`.
+Whether the button went down in the last update.
 
 
 ### .getButtonReleased
@@ -253,7 +228,7 @@ Whether the button went down in the last update. True for one update per press, 
 getButtonReleased( name: string ): boolean
 ```
 
-Whether the button went up in the last update. True for one update per release.
+Whether the button went up in the last update.
 
 
 ### .getAxis
@@ -262,9 +237,7 @@ Whether the button went up in the last update. True for one update per release.
 getAxis( name: string ): number
 ```
 
-The axis position from -1 to 1, with the dead zone applied; for sticks, -1 is left or up. Also
-accepts a button name, giving how far the button is pressed from 0 to 1, e.g. a trigger's pull.
-Returns 0 for unknown names.
+The axis value from -1 to 1, or how far a button is pressed from 0 to 1.
 
 
 ### .getButtonNames
@@ -273,7 +246,7 @@ Returns 0 for unknown names.
 getButtonNames(): Iterable<string>
 ```
 
-Names of the device's buttons. For the keyboard, only keys pressed so far.
+Names of the device's buttons.
 
 
 ### .getAxisNames
@@ -282,34 +255,24 @@ Names of the device's buttons. For the keyboard, only keys pressed so far.
 getAxisNames(): Iterable<string>
 ```
 
-Names of the device's axes. Empty for the keyboard and mouse.
+Names of the device's axes.
 
 
 ## GamepadController
 
 _extends [`Controller`](#controller)_
 
-A gamepad. With the browser's `'standard'` mapping buttons are named by position: the face buttons
-`south`, `east`, `west` and `north` ( A, B, X, Y on Xbox ), then `left-bumper`, `right-bumper`,
-`left-trigger`, `right-trigger`, `select`, `start`, `left-stick`, `right-stick`, `dpad-up`,
-`dpad-down`, `dpad-left`, `dpad-right` and `home`, and axes `left-x`, `left-y`, `right-x` and
-`right-y`. Otherwise they're named `button-0`, `axis-0` and so on.
-
-Each axis direction is also a button, held past `pressThreshold` like a trigger: `left-stick-up`,
-`left-stick-down`, `left-stick-left`, `left-stick-right` and the same for `right-stick`, or
-`axis-0-negative`, `axis-0-positive` and so on without the `'standard'` mapping.
-
-Created by `ControllerManager`, and kept in its slot across disconnects so references stay valid.
+A gamepad, with buttons and axes named by position, like `south` and `left-x`. See the README for
+the full list.
 
 
 ### events
 
 ```js
-// Fired when a gamepad connects to this controller, before the manager's `connected` event.
+// Fired when the gamepad connects.
 { type: 'connected' }
 
-// Fired when the gamepad disconnects, after its held buttons are released, and before the
-// manager's `disconnected` event.
+// Fired when the gamepad disconnects.
 { type: 'disconnected' }
 ```
 
@@ -319,7 +282,7 @@ Created by `ControllerManager`, and kept in its slot across disconnects so refer
 id: string
 ```
 
-The browser's id for the controller model, e.g. its product name. Kept after disconnecting.
+The browser's id for the controller model.
 
 
 ### .brand
@@ -328,17 +291,16 @@ The browser's id for the controller model, e.g. its product name. Kept after dis
 brand: string
 ```
 
-The controller's brand, guessed from `id`: `'xbox'`, `'playstation'`, `'nintendo'`, or `''`
-when unknown. Many third-party controllers report themselves as Xbox controllers.
+`'xbox'`, `'playstation'`, `'nintendo'`, or `''` when unknown.
 
 
-### .index
+### .slot
 
 ```js
-index: number
+slot: number
 ```
 
-The browser's index for the connected gamepad, or -1.
+The controller's slot in the manager, or -1 once removed by `reassignSlots`.
 
 
 ### .features
@@ -356,8 +318,7 @@ What the connected gamepad exposes.
 deadZone: number
 ```
 
-Stick values under this distance from center read as 0, and values beyond it are rescaled to
-start from 0. Applied to each stick's x and y together.
+Stick values under this distance from center read as 0.
 
 
 ### .getButtonName
@@ -366,9 +327,8 @@ start from 0. Applied to each stick's x and y together.
 getButtonName( name: string ): string
 ```
 
-Returns the name printed on the controller for a button, e.g. `'A'` for `south` on Xbox and
-`'Cross'` on PlayStation. Unknown brands get the Xbox names, and controllers without the
-`'standard'` mapping get `name` back.
+The name printed on the controller for a button, e.g. `'A'` or `'Cross'`. Xbox names for
+unknown brands.
 
 
 ### .rumble
@@ -377,8 +337,7 @@ Returns the name printed on the controller for a button, e.g. `'A'` for `south` 
 rumble( type: string, params: Object ): Promise<string> | null
 ```
 
-Plays a rumble effect through the gamepad's `vibrationActuator.playEffect`. Check
-`features.rumble` and `features.triggerRumble` for support.
+Plays a rumble effect through `vibrationActuator.playEffect`. Returns null if unsupported.
 
 
 ### .stopRumble
@@ -387,18 +346,14 @@ Plays a rumble effect through the gamepad's `vibrationActuator.playEffect`. Chec
 stopRumble(): Promise<string> | null
 ```
 
-Stops the current rumble effect through the gamepad's `vibrationActuator.reset`. The stopped
-effect's promise resolves `'preempted'`.
+Stops the current rumble effect. Returns null if unsupported.
 
 
 ## KeyboardController
 
 _extends [`Controller`](#controller)_
 
-The keyboard. Buttons are named by `KeyboardEvent.code`, the physical key position ( `KeyW`,
-`Space`, `ArrowUp` ), so they stay put on any layout. A key tapped between two updates still
-reads as pressed for one update. Held keys are released when the window loses focus. Get it from
-`ControllerManager.getKeyboard`.
+The keyboard, with buttons named by `KeyboardEvent.code`, like `KeyW`.
 
 
 ### .getButtonName
@@ -407,18 +362,14 @@ reads as pressed for one update. Held keys are released when the window loses fo
 getButtonName( name: string ): string
 ```
 
-The key's printed name, e.g. `'W'` for `KeyW`, `'Left Shift'` for `ShiftLeft` and `'Page Up'`
-for `PageUp`. Letter, number and punctuation keys follow the user's layout in browsers that
-expose it ( `navigator.keyboard.getLayoutMap` ), and a US layout otherwise.
+The key's printed name, e.g. `'W'` for `KeyW`, following the user's layout where available.
 
 
 ## MouseController
 
 _extends [`Controller`](#controller)_
 
-The mouse buttons: `left`, `middle`, `right`, `back` and `forward`. A click between two updates
-still reads as pressed for one update. Held buttons are released when the window loses focus.
-Get it from `ControllerManager.getMouse`.
+The mouse, with buttons `left`, `middle`, `right`, `back` and `forward`.
 
 
 ### .getPosition
@@ -427,8 +378,7 @@ Get it from `ControllerManager.getMouse`.
 getPosition( target: Object ): Object
 ```
 
-Gets the mouse position in CSS pixels from the window's top left corner, as of the last update.
-Reads 0, 0 until the mouse first moves over the page.
+Gets the mouse position in CSS pixels from the window's top left.
 
 
 ### .getButtonName
@@ -437,8 +387,7 @@ Reads 0, 0 until the mouse first moves over the page.
 getButtonName( name: string ): string
 ```
 
-The button's printed name: `'Left Click'`, `'Middle Click'`, `'Right Click'`, `'Mouse Back'` or
-`'Mouse Forward'`.
+The button's printed name, e.g. `'Left Click'`.
 
 
 ## GamepadFeatures
@@ -450,8 +399,7 @@ The button's printed name: `'Left Click'`, `'Middle Click'`, `'Right Click'`, `'
 mapping: string
 ```
 
-The browser's mapping: `'standard'`, or `''` when the controller
-isn't recognized and buttons and axes are only numbered.
+`'standard'`, or `''` when the controller isn't recognized.
 
 ### .buttons
 
@@ -475,9 +423,7 @@ Number of axes.
 rumble: boolean
 ```
 
-Whether the gamepad supports the `'dual-rumble'` effect. Browsers
-without a list of supported effects, like Safari, report true whenever they expose a vibration
-actuator.
+Whether `'dual-rumble'` is supported.
 
 ### .triggerRumble
 
@@ -485,5 +431,4 @@ actuator.
 triggerRumble: boolean
 ```
 
-Whether the gamepad supports the `'trigger-rumble'` effect,
-the motors in the triggers of Xbox controllers.
+Whether `'trigger-rumble'` is supported.

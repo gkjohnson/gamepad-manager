@@ -112,8 +112,7 @@ function addDisplay( controller, brand ) {
 	let index = displays.length;
 	if ( controller ) {
 
-		const slot = manager.controllers.indexOf( controller );
-		index = displays.findIndex( d => ! d.controller || manager.controllers.indexOf( d.controller ) > slot );
+		index = displays.findIndex( d => ! d.controller || d.controller.slot > controller.slot );
 		if ( index === - 1 ) index = displays.length;
 
 	}
@@ -148,7 +147,7 @@ function addDisplay( controller, brand ) {
 
 }
 
-// slides a display out of view; it's removed once gone ( see updateDisplay )
+// slides a display out of view; it's removed once gone (see updateDisplay)
 function hideDisplay( display ) {
 
 	display.shown = false;
@@ -304,7 +303,7 @@ function layout() {
 		// connected gamepads show their manager slot, which comes first, and dummies the numbers left
 		if ( display.controller ) {
 
-			display.player = manager.controllers.indexOf( display.controller ) + 1;
+			display.player = display.controller.slot + 1;
 
 		} else {
 

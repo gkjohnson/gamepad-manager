@@ -3,7 +3,7 @@
 Gamepad, keyboard and mouse input for browser games, with one query and event API across devices.
 
 - Gamepads stay in stable slots as controllers connect and disconnect, until reassigned to fill the slots from 0.
-- Buttons are named by position ( `south`, `left-trigger`, ... ), the same on Xbox, PlayStation and Switch controllers.
+- Buttons are named by position (`south`, `left-trigger`, ...), the same on Xbox, PlayStation and Switch controllers.
 - Radial stick dead zones, and press and release thresholds so analog triggers don't flicker.
 - Query state each frame or listen for `pressed` / `released` events, with no allocations per frame.
 - Optional three.js controller models whose buttons and sticks move with a controller's state.
@@ -46,7 +46,7 @@ frame();
 
 ## Button names
 
-Gamepads with the browser's `'standard'` mapping, with the printed names `getButtonName` returns for each brand ( Xbox's for unknown brands ):
+Gamepads with the browser's `'standard'` mapping, with the printed names `getButtonName` returns for each brand (Xbox's for unknown brands):
 
 | Name | Xbox | PlayStation | Nintendo |
 |---|---|---|---|
@@ -63,13 +63,13 @@ Gamepads with the browser's `'standard'` mapping, with the printed names `getBut
 
 Axes are `left-x`, `left-y`, `right-x` and `right-y`, from -1 to 1. Each stick direction is also a button, `left-stick-up`, `left-stick-down`, `left-stick-left`, `left-stick-right` and the same for `right-stick`, held when pushed past halfway. Unrecognized controllers get `button-0`, `axis-0`, `axis-0-negative`, `axis-0-positive` and so on.
 
-The keyboard uses `KeyboardEvent.code` names ( `KeyW`, `Space`, `ArrowUp` ), and the mouse `left`, `middle`, `right`, `back` and `forward`. `getMouse().getPosition( target )` gives the mouse position in CSS pixels.
+The keyboard uses `KeyboardEvent.code` names (`KeyW`, `Space`, `ArrowUp`), and the mouse `left`, `middle`, `right`, `back` and `forward`. `getMouse().getPosition( target )` gives the mouse position in CSS pixels.
 
-Every device has `getButtonName( name )` for on-screen prompts: `'A'` or `'Cross'` for a gamepad's `south`, `'W'` for `KeyW` ( following the user's layout where the browser exposes it ), `'Left Click'` for the mouse's `left`. `manager.lastActive` is the device last used, to pick which prompts to show.
+Every device has `getButtonName( name )` for on-screen prompts: `'A'` or `'Cross'` for a gamepad's `south`, `'W'` for `KeyW` (following the user's layout where the browser exposes it), `'Left Click'` for the mouse's `left`. `manager.lastActive` is the device last used, to pick which prompts to show.
 
 ## Controller models
 
-`gamepad-manager/three` has three.js models that show a controller's state, for the models in `example/models/`. A gamepad's `brand` ( `'xbox'`, `'playstation'`, `'nintendo'` or `''` ) picks the one to show:
+`gamepad-manager/three` has three.js models that show a controller's state, for the models in `example/models/`. A gamepad's `brand` (`'xbox'`, `'playstation'`, `'nintendo'` or `''`) picks the one to show:
 
 ```js
 import { DualShockControllerModel, XboxControllerModel } from 'gamepad-manager/three';
@@ -97,7 +97,7 @@ npm start
 
 # Credits
 
-Controller models in `example/models/`, both [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) and modified ( split into separate parts and compressed ):
+Controller models in `example/models/`, both [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) and modified (split into separate parts and compressed):
 
 - `xbox-controller.glb`: [Xbox Inalambric Controller (White)](https://sketchfab.com/3d-models/xbox-inalambric-controller-white-f18a70fc10414ef5a39b55de68f12823) by [Chistodrako._.](https://sketchfab.com/oscar.lopez.riviello)
 - `dualshock-controller.glb`: [DualShock 4 PlayStation Controller](https://sketchfab.com/3d-models/dualshock-4-playstation-controller-e3c2f0dc16524fc19cdde45bad1de1a9) by [shaielwolf](https://sketchfab.com/shaielwolf)

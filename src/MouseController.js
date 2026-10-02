@@ -13,9 +13,7 @@ const MOUSE_NAMES = {
 };
 
 /**
- * The mouse buttons: `left`, `middle`, `right`, `back` and `forward`. A click between two updates
- * still reads as pressed for one update. Held buttons are released when the window loses focus.
- * Get it from `ControllerManager.getMouse`.
+ * The mouse, with buttons `left`, `middle`, `right`, `back` and `forward`.
  * @extends Controller
  */
 export class MouseController extends Controller {
@@ -71,10 +69,9 @@ export class MouseController extends Controller {
 	}
 
 	/**
-	 * Gets the mouse position in CSS pixels from the window's top left corner, as of the last update.
-	 * Reads 0, 0 until the mouse first moves over the page.
-	 * @param {{ x: number, y: number }} target - The object to write `x` and `y` to.
-	 * @returns {{ x: number, y: number }} `target`.
+	 * Gets the mouse position in CSS pixels from the window's top left.
+	 * @param {{ x: number, y: number }} target
+	 * @returns {{ x: number, y: number }}
 	 */
 	getPosition( target ) {
 
@@ -85,8 +82,7 @@ export class MouseController extends Controller {
 	}
 
 	/**
-	 * The button's printed name: `'Left Click'`, `'Middle Click'`, `'Right Click'`, `'Mouse Back'` or
-	 * `'Mouse Forward'`.
+	 * The button's printed name, e.g. `'Left Click'`.
 	 * @param {string} name
 	 * @returns {string}
 	 */
@@ -118,7 +114,7 @@ export class MouseController extends Controller {
 	}
 
 	/**
-	 * Removes the window event listeners. Called by `ControllerManager.dispose`.
+	 * Removes the window event listeners.
 	 * @private
 	 */
 	dispose() {

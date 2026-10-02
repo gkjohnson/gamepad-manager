@@ -1,23 +1,19 @@
 import { EventDispatcher } from './EventDispatcher.js';
 
 /**
- * Fired during `update` when a button goes down. The event object is reused, so copy any fields to
- * keep.
+ * Fired when a button goes down. The event object is reused.
  * @event Controller#pressed
  * @property {string} name - The button's name.
  */
 
 /**
- * Fired during `update` when a button goes up. The event object is reused, so copy any fields to
- * keep.
+ * Fired when a button goes up. The event object is reused.
  * @event Controller#released
  * @property {string} name - The button's name.
  */
 
 /**
- * Base class for an input device: named buttons and axes, queried after each `update` or listened
- * to through events. Buttons are either held or not; how far an analog button is pressed is read
- * with `getAxis`. Controllers are created by `ControllerManager`.
+ * Base class for an input device with named buttons and axes.
  * @extends EventDispatcher
  */
 export class Controller extends EventDispatcher {
@@ -40,14 +36,13 @@ export class Controller extends EventDispatcher {
 		this.connected = false;
 
 		/**
-		 * How far an analog button, such as a trigger, must be pressed to count as held.
+		 * How far an analog button must be pressed to count as held.
 		 * @type {number}
 		 */
 		this.pressThreshold = 0.5;
 
 		/**
-		 * How far a held analog button must come back to count as released. Lower than
-		 * `pressThreshold` so a trigger resting near it doesn't flicker.
+		 * How far a held analog button must come back to count as released.
 		 * @type {number}
 		 */
 		this.releaseThreshold = 0.4;
@@ -56,14 +51,13 @@ export class Controller extends EventDispatcher {
 		this._axes = new Map();
 		this._event = { type: '', name: '', target: null };
 
-		// whether a button was pressed or an axis moved in the last update, for the manager's lastActive
+		// whether the device was used in the last update
 		this._active = false;
 
 	}
 
 	/**
-	 * The name printed on the device for a button, e.g. `'A'` for a gamepad's `south` or `'W'` for
-	 * the keyboard's `KeyW`, for on-screen prompts. Implemented by each device; this returns `name`.
+	 * The name printed on the device for a button, e.g. `'A'` or `'W'`.
 	 * @param {string} name
 	 * @returns {string}
 	 */
@@ -74,8 +68,7 @@ export class Controller extends EventDispatcher {
 	}
 
 	/**
-	 * Whether the button is down. True on every update while held, including the one it went down.
-	 * Analog buttons count as held from `pressThreshold` until they drop below `releaseThreshold`.
+	 * Whether the button is down.
 	 * @param {string} name
 	 * @returns {boolean}
 	 */
@@ -87,8 +80,7 @@ export class Controller extends EventDispatcher {
 	}
 
 	/**
-	 * Whether the button went down in the last update. True for one update per press, unlike
-	 * `getButtonHeld`.
+	 * Whether the button went down in the last update.
 	 * @param {string} name
 	 * @returns {boolean}
 	 */
@@ -100,7 +92,7 @@ export class Controller extends EventDispatcher {
 	}
 
 	/**
-	 * Whether the button went up in the last update. True for one update per release.
+	 * Whether the button went up in the last update.
 	 * @param {string} name
 	 * @returns {boolean}
 	 */
@@ -112,9 +104,7 @@ export class Controller extends EventDispatcher {
 	}
 
 	/**
-	 * The axis position from -1 to 1, with the dead zone applied; for sticks, -1 is left or up. Also
-	 * accepts a button name, giving how far the button is pressed from 0 to 1, e.g. a trigger's pull.
-	 * Returns 0 for unknown names.
+	 * The axis value from -1 to 1, or how far a button is pressed from 0 to 1.
 	 * @param {string} name
 	 * @returns {number}
 	 */
@@ -129,7 +119,7 @@ export class Controller extends EventDispatcher {
 	}
 
 	/**
-	 * Names of the device's buttons. For the keyboard, only keys pressed so far.
+	 * Names of the device's buttons.
 	 * @returns {Iterable<string>}
 	 */
 	getButtonNames() {
@@ -139,7 +129,7 @@ export class Controller extends EventDispatcher {
 	}
 
 	/**
-	 * Names of the device's axes. Empty for the keyboard and mouse.
+	 * Names of the device's axes.
 	 * @returns {Iterable<string>}
 	 */
 	getAxisNames() {
@@ -149,8 +139,7 @@ export class Controller extends EventDispatcher {
 	}
 
 	/**
-	 * Reads the device's latest state and fires events for buttons that changed. Called by
-	 * `ControllerManager.update`.
+	 * Reads the device's latest state.
 	 * @private
 	 */
 	update() {}
@@ -196,7 +185,7 @@ export class Controller extends EventDispatcher {
 
 	}
 
-	// releases every button and centers every axis, e.g. on disconnect or losing focus
+	// releases every button and centers every axis
 	_releaseAll() {
 
 		for ( const name of this._buttons.keys() ) this._setButton( name, 0 );
