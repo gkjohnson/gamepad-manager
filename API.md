@@ -91,10 +91,11 @@ The device used most recently, e.g. for picking which button prompts to show.
 ### .getController
 
 ```js
-getController( slot: number ): GamepadController | null
+getController( slot: number ): GamepadController
 ```
 
-The gamepad in a slot, or null. Check `connected` before using it.
+The gamepad in a slot, created if needed so listeners can be added before one connects.
+Check `connected` before using it.
 
 
 ### .getKeyboard

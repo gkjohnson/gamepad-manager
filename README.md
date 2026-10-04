@@ -23,12 +23,15 @@ manager.addEventListener( 'connected', e => console.log( `${ e.controller.id } i
 const keyboard = manager.getKeyboard();
 keyboard.addEventListener( 'pressed', e => console.log( e.name ) );
 
+// slot 0's controller exists before a gamepad connects, so listeners can be added up front
+const pad = manager.getController( 0 );
+pad.addEventListener( 'pressed', e => console.log( e.name ) );
+
 function frame() {
 
 	manager.update();
 
-	const pad = manager.getController( 0 );
-	if ( pad && pad.connected ) {
+	if ( pad.connected ) {
 
 		if ( pad.getButtonPressed( 'south' ) ) jump();
 		move( pad.getAxis( 'left-x' ), pad.getAxis( 'left-y' ) );
@@ -69,14 +72,14 @@ Every device has `getButtonName( name )` for on-screen prompts: `'A'` or `'Cross
 
 ## Controller models
 
-`gamepad-manager/three` has three.js models that show a controller's state, for the models in `example/models/`. A gamepad's `brand` (`'xbox'`, `'playstation'`, `'nintendo'` or `''`) picks the one to show:
+`gamepad-manager/three` has three.js models that show a controller's state. Each loads its own model file, shipped in the package and found with `new URL( ..., import.meta.url )`, which works in browsers, Vite and webpack; Rollup needs a plugin for it. A gamepad's `brand` (`'xbox'`, `'playstation'`, `'nintendo'` or `''`) picks the one to show:
 
 ```js
 import { DualShockControllerModel, XboxControllerModel } from 'gamepad-manager/three';
 
-const gltf = await new GLTFLoader().loadAsync( pad.brand === 'playstation' ? DUALSHOCK_URL : XBOX_URL );
-const model = pad.brand === 'playstation' ? new DualShockControllerModel( gltf.scene ) : new XboxControllerModel( gltf.scene );
+const model = pad.brand === 'playstation' ? new DualShockControllerModel() : new XboxControllerModel();
 scene.add( model );
+await model.loaded;
 
 // each frame
 model.setFromController( pad );
@@ -97,7 +100,7 @@ npm start
 
 # Credits
 
-Controller models in `example/models/`, both [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) and modified (split into separate parts and compressed):
+Controller models in `src/three/models/`, both [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) and modified (split into separate parts and compressed):
 
 - `xbox-controller.glb`: [Xbox Inalambric Controller (White)](https://sketchfab.com/3d-models/xbox-inalambric-controller-white-f18a70fc10414ef5a39b55de68f12823) by [Chistodrako._.](https://sketchfab.com/oscar.lopez.riviello)
 - `dualshock-controller.glb`: [DualShock 4 PlayStation Controller](https://sketchfab.com/3d-models/dualshock-4-playstation-controller-e3c2f0dc16524fc19cdde45bad1de1a9) by [shaielwolf](https://sketchfab.com/shaielwolf)

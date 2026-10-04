@@ -1,6 +1,6 @@
-/** @import { Object3D } from 'three' */
 /** @import { Controller } from '../Controller.js' */
 import { Box3, Group, Vector3 } from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 // how far parts move or rotate when fully pressed
 const PRESS_DEPTH = 0.006;
@@ -58,13 +58,31 @@ const _axis = new Vector3();
 export class ControllerModel extends Group {
 
 	/**
-	 * @param {Object3D} scene - The loaded model.
+	 * @param {string|URL} url - The model file.
 	 */
-	constructor( scene ) {
+	constructor( url ) {
 
 		super();
 
-		this.add( scene );
+		/**
+		 * Resolves once the model has loaded.
+		 * @type {Promise<void>}
+		 */
+		this.loaded = new GLTFLoader().loadAsync( url.toString() ).then( gltf => {
+
+			if ( this._disposed ) {
+
+				disposeObject( gltf.scene );
+
+			} else {
+
+				this._initParts( gltf.scene );
+
+			}
+
+		} );
+
+		this._disposed = false;
 
 		// direction a pulled trigger tips the controller, set by each subclass
 		this._triggerDirection = new Vector3( 0, 1, 0 );
@@ -76,6 +94,11 @@ export class ControllerModel extends Group {
 		this._right = new Vector3( 1, 0, 0 );
 		this._left = new Vector3( - 1, 0, 0 );
 		this._down = new Vector3().crossVectors( PRESS, this._right );
+
+	}
+
+	// finds the loaded model's moving parts and adds it
+	_initParts( scene ) {
 
 		// sticks tilt about their origin
 		const pivots = {};
@@ -134,6 +157,8 @@ export class ControllerModel extends Group {
 			this._buttons.push( { name, part, rest: part.position.clone(), direction, depth } );
 
 		}
+
+		this.add( scene );
 
 	}
 
@@ -249,6 +274,16 @@ export class ControllerModel extends Group {
 
 	}
 
+	/**
+	 * Frees the model's geometry, materials and textures.
+	 */
+	dispose() {
+
+		this._disposed = true;
+		disposeObject( this );
+
+	}
+
 	// rotates a part about "rotation" by its length times "scale"
 	_rotatePart( object, rotation, scale ) {
 
@@ -274,5 +309,49 @@ function addTorque( target, position, direction, amount ) {
 	_force.copy( direction ).multiplyScalar( amount );
 	_torque.crossVectors( position, _force );
 	target.add( _torque );
+
+}
+
+// frees the geometry, materials and textures of an object and its children
+function disposeObject( root ) {
+
+	root.traverse( object => {
+
+		if ( object.geometry ) {
+
+			object.geometry.dispose();
+
+		}
+
+		if ( ! object.material ) {
+
+			return;
+
+		}
+
+		const materials = Array.isArray( object.material ) ? object.material : [ object.material ];
+		for ( const material of materials ) {
+
+			for ( const key in material ) {
+
+				const value = material[ key ];
+				if ( value && value.isTexture ) {
+
+					value.dispose();
+					if ( value.image instanceof ImageBitmap ) {
+
+						value.image.close();
+
+					}
+
+				}
+
+			}
+
+			material.dispose();
+
+		}
+
+	} );
 
 }

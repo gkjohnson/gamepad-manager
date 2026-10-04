@@ -2,7 +2,6 @@
 	"name": "gamepad-manager",
 	"version": "0.0.0",
 	"description": "Gamepad, keyboard and mouse input for the browser.",
-	"private": true,
 	"type": "module",
 	"sideEffects": false,
 	"main": "src/index.js",
@@ -11,12 +10,16 @@
 		".": "./src/index.js",
 		"./three": "./src/three/index.js"
 	},
+	"files": [
+		"src/*"
+	],
 	"scripts": {
 		"start": "vite --config ./vite.config.js",
 		"build-examples": "vite build --config ./vite.config.js",
 		"lint": "eslint ."
 	},
 	"author": "Garrett Johnson <garrett.kjohnson@gmail.com>",
+	"license": "MIT",
 	"devDependencies": {
 		"@eslint/js": "^9.39.5",
 		"eslint": "^9.39.5",

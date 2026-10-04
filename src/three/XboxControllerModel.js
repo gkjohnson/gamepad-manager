@@ -1,7 +1,7 @@
-/** @import { Object3D } from 'three' */
 import { Vector3 } from 'three';
 import { ControllerModel } from './ControllerModel.js';
 
+const MODEL_URL = new URL( './models/xbox-controller.glb', import.meta.url );
 const DPAD_ANGLE = 0.12;
 const DPAD_BUTTONS = [ 'dpad-up', 'dpad-down', 'dpad-left', 'dpad-right' ];
 const PRESS = new Vector3( 0, - 1, 0 );
@@ -9,21 +9,17 @@ const PRESS = new Vector3( 0, - 1, 0 );
 const _rotation = new Vector3();
 
 /**
- * An Xbox controller model, for `example/models/xbox-controller.glb`.
+ * An Xbox controller model.
  * @extends ControllerModel
  */
 export class XboxControllerModel extends ControllerModel {
 
-	/**
-	 * @param {Object3D} scene - The loaded model.
-	 */
-	constructor( scene ) {
+	constructor() {
 
-		super( scene );
+		super( MODEL_URL );
 		this._triggerDirection.set( 0, 0.66, 0.75 ).normalize();
 
-		// the d-pad is one piece that rocks toward the pressed direction
-		this._dpad = scene.getObjectByName( 'dpad' );
+		this._dpad = null;
 		this._dpadAxes = {
 			'dpad-up': this._right.clone().negate(),
 			'dpad-down': this._right.clone(),
@@ -31,6 +27,14 @@ export class XboxControllerModel extends ControllerModel {
 			'dpad-right': this._down.clone().negate(),
 		};
 
+	}
+
+	_initParts( scene ) {
+
+		super._initParts( scene );
+
+		// the d-pad is one piece that rocks toward the pressed direction
+		this._dpad = scene.getObjectByName( 'dpad' );
 		for ( const name of DPAD_BUTTONS ) {
 
 			this._values[ name ] = 0;
@@ -44,7 +48,7 @@ export class XboxControllerModel extends ControllerModel {
 
 		super.setButton( name, value );
 
-		if ( DPAD_BUTTONS.includes( name ) ) {
+		if ( this._dpad && DPAD_BUTTONS.includes( name ) ) {
 
 			_rotation.set( 0, 0, 0 );
 			for ( let i = 0, l = DPAD_BUTTONS.length; i < l; i ++ ) {

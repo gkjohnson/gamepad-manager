@@ -8,10 +8,19 @@ _extends `Group`_
 Base class for the 3D controller models.
 
 
+### .loaded
+
+```js
+loaded: Promise<void>
+```
+
+Resolves once the model has loaded.
+
+
 ### .constructor
 
 ```js
-constructor( scene: Object3D )
+constructor( url: string | URL )
 ```
 
 ### .setButton
@@ -50,28 +59,25 @@ getTilt( target: Vector3 ): Vector3
 Gets the turning force the current presses apply to the controller, for tilting it slightly.
 
 
+### .dispose
+
+```js
+dispose(): void
+```
+
+Frees the model's geometry, materials and textures.
+
+
 ## DualShockControllerModel
 
 _extends [`ControllerModel`](#controllermodel)_
 
-A PlayStation DualShock 4 controller model, for `example/models/dualshock-controller.glb`.
+A PlayStation DualShock 4 controller model.
 
-
-### .constructor
-
-```js
-constructor( scene: Object3D )
-```
 
 ## XboxControllerModel
 
 _extends [`ControllerModel`](#controllermodel)_
 
-An Xbox controller model, for `example/models/xbox-controller.glb`.
+An Xbox controller model.
 
-
-### .constructor
-
-```js
-constructor( scene: Object3D )
-```

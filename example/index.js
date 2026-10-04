@@ -10,7 +10,6 @@ import {
 	Vector3,
 	WebGLRenderer,
 } from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { ControllerManager } from '../src/index.js';
 import { DualShockControllerModel, XboxControllerModel } from '../src/three/index.js';
@@ -18,8 +17,8 @@ import { DualShockControllerModel, XboxControllerModel } from '../src/three/inde
 // the model shown for each controller brand, with the Xbox model for anything else, and how far to
 // tip it to show its top edge while the bumpers or triggers are in use
 const MODELS = {
-	xbox: { url: './models/xbox-controller.glb', ModelClass: XboxControllerModel, topAngle: 1.2 },
-	playstation: { url: './models/dualshock-controller.glb', ModelClass: DualShockControllerModel, topAngle: 1.45 },
+	xbox: { ModelClass: XboxControllerModel, topAngle: 1.2 },
+	playstation: { ModelClass: DualShockControllerModel, topAngle: 1.45 },
 };
 const DEFAULT_BRAND = 'xbox';
 
@@ -94,7 +93,8 @@ function addDisplay( controller, brand ) {
 	const display = {
 		controller,
 		brand,
-		model: null,
+		model: new MODELS[ brand ].ModelClass(),
+		loaded: false,
 		group: new Group(),
 		dots: new Group(),
 		player: 1,
@@ -128,14 +128,15 @@ function addDisplay( controller, brand ) {
 
 	}
 
-	loadModel( brand ).then( model => {
+	const { model } = display;
+	model.loaded.then( () => {
 
 		// the models lie face up, so stand each up toward the camera
 		const stand = new Group();
 		stand.rotation.x = STAND_ANGLE;
 		stand.add( model );
 
-		display.model = model;
+		display.loaded = true;
 		display.group.add( stand );
 
 	} );
@@ -181,16 +182,6 @@ function lastDummy() {
 	}
 
 	return null;
-
-}
-
-// a new copy of a brand's model, loading the file once
-const loaded = {};
-function loadModel( brand ) {
-
-	const { url, ModelClass } = MODELS[ brand ];
-	if ( ! loaded[ brand ] ) loaded[ brand ] = new GLTFLoader().loadAsync( url );
-	return loaded[ brand ].then( gltf => new ModelClass( gltf.scene.clone() ) );
 
 }
 
@@ -344,7 +335,7 @@ function updateDisplay( display, time, delta ) {
 	smoothDamp( display.x, display.x.target, LAYOUT_TIME, delta );
 	smoothDamp( display.y, display.y.target, LAYOUT_TIME, delta );
 
-	if ( model && controller ) {
+	if ( controller ) {
 
 		// show the gamepad, which reads as released once disconnected
 		model.setFromController( controller );
@@ -381,7 +372,7 @@ function updateDisplay( display, time, delta ) {
 	// speed, and is removed once gone
 	if ( display.shown ) {
 
-		if ( model ) smoothDamp( slide, 0, SLIDE_TIME, delta );
+		if ( display.loaded ) smoothDamp( slide, 0, SLIDE_TIME, delta );
 
 	} else {
 
@@ -398,6 +389,7 @@ function updateDisplay( display, time, delta ) {
 
 			stage.remove( group, display.dots );
 			displays.splice( displays.indexOf( display ), 1 );
+			model.dispose();
 
 		}
 

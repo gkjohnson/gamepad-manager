@@ -57,13 +57,23 @@ export class ControllerManager extends EventDispatcher {
 	}
 
 	/**
-	 * The gamepad in a slot, or null. Check `connected` before using it.
+	 * The gamepad in a slot, created if needed so listeners can be added before one connects.
+	 * Check `connected` before using it.
 	 * @param {number} slot
-	 * @returns {GamepadController|null}
+	 * @returns {GamepadController}
 	 */
 	getController( slot ) {
 
-		return this.controllers[ slot ] || null;
+		const { controllers } = this;
+		while ( controllers.length <= slot ) {
+
+			const controller = new GamepadController();
+			controller.slot = controllers.length;
+			controllers.push( controller );
+
+		}
+
+		return controllers[ slot ];
 
 	}
 
@@ -245,10 +255,7 @@ export class ControllerManager extends EventDispatcher {
 
 		if ( free !== - 1 ) return free;
 
-		const controller = new GamepadController();
-		controller.slot = controllers.length;
-		controllers.push( controller );
-		return controller.slot;
+		return this.getController( controllers.length ).slot;
 
 	}
 
