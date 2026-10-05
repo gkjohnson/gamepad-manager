@@ -11,8 +11,8 @@ import {
 	WebGLRenderer,
 } from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { ControllerManager } from '../src/core/index.js';
-import { DualShockControllerModel, XboxControllerModel } from '../src/three/index.js';
+import { ControllerManager } from 'gamepad-manager';
+import { DualShockControllerModel, XboxControllerModel } from 'gamepad-manager/three';
 
 // the model shown for each controller brand, with the Xbox model for anything else, and how far to
 // tip it to show its top edge while the bumpers or triggers are in use
