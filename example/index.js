@@ -20,7 +20,6 @@ const MODELS = {
 	xbox: { ModelClass: XboxControllerModel, topAngle: 1.2 },
 	playstation: { ModelClass: DualShockControllerModel, topAngle: 1.45 },
 };
-const DEFAULT_BRAND = 'xbox';
 
 // up to four controllers shown at once, each in a cell of this size, two to a row past two
 const MAX_SHOWN = 4;
@@ -85,11 +84,10 @@ scene.add( stage );
 // its own group, positioned in the layout, while its model tilts within it
 const displays = [];
 let dummyCount = 0;
-let lastShownCount = - 1;
 
 function addDisplay( controller, brand ) {
 
-	brand = brand in MODELS ? brand : DEFAULT_BRAND;
+	brand = brand in MODELS ? brand : 'xbox';
 	const display = {
 		controller,
 		brand,
@@ -152,13 +150,6 @@ function addDisplay( controller, brand ) {
 
 }
 
-// slides a display out of view; it's removed once gone (see updateDisplay)
-function hideDisplay( display ) {
-
-	display.shown = false;
-
-}
-
 function countShown() {
 
 	let count = 0;
@@ -207,7 +198,8 @@ function lastDummy() {
 
 }
 
-// input: a display for each connected gamepad, making room by removing a dummy if needed
+// input: a display for each connected gamepad, making room by removing a dummy if needed. A display
+// is hidden by clearing "shown", which slides it out and removes it once gone (see updateDisplay)
 const timer = new Timer();
 const status = document.getElementById( 'status' );
 const manager = new ControllerManager();
@@ -223,7 +215,7 @@ manager.addEventListener( 'connected', e => {
 
 		}
 
-		hideDisplay( dummy );
+		dummy.shown = false;
 
 	}
 
@@ -249,7 +241,7 @@ manager.addEventListener( 'disconnected', e => {
 	const display = displays.find( d => d.controller === e.controller && d.shown );
 	if ( display ) {
 
-		hideDisplay( display );
+		display.shown = false;
 
 	}
 
@@ -268,7 +260,7 @@ manager.getKeyboard().addEventListener( 'pressed', e => {
 		const dummy = lastDummy();
 		if ( dummy ) {
 
-			hideDisplay( dummy );
+			dummy.shown = false;
 
 		}
 
@@ -299,14 +291,7 @@ function animate( timestamp ) {
 
 	}
 
-	const shownCount = countShown();
-	if ( shownCount !== lastShownCount ) {
-
-		status.style.opacity = shownCount === 0 ? 1 : 0;
-		lastShownCount = shownCount;
-
-	}
-
+	status.style.opacity = countShown() === 0 ? 1 : 0;
 	renderer.render( scene, camera );
 
 }
@@ -411,16 +396,7 @@ function updateDisplay( display, time, delta ) {
 		// ease toward the tilt from the current pushes, the same at any frame rate
 		tilt.lerp( model.getTilt( _torque ), 1 - Math.exp( - 12 * delta ) );
 
-		const angle = tilt.length() * TILT;
-		if ( angle > 0 ) {
-
-			model.quaternion.setFromAxisAngle( _axis.copy( tilt ).normalize(), angle );
-
-		} else {
-
-			model.quaternion.identity();
-
-		}
+		model.quaternion.setFromAxisAngle( _axis.copy( tilt ).normalize(), tilt.length() * TILT );
 
 	}
 
