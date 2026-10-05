@@ -1,14 +1,6 @@
 <!-- This file is generated automatically. Do not edit it directly. -->
 # gamepad-manager
 
-## Constants
-
-### _empty
-
-```js
-_empty
-```
-
 ## EventDispatcher
 
 Minimal event dispatcher, following three.js's `EventDispatcher`.
@@ -21,15 +13,6 @@ addEventListener( type: string, listener: function ): void
 ```
 
 Adds a listener for an event type.
-
-
-### .hasEventListener
-
-```js
-hasEventListener( type: string, listener: function ): boolean
-```
-
-Whether the listener is registered for this event type.
 
 
 ### .removeEventListener
@@ -241,30 +224,15 @@ getAxis( name: string ): number
 The axis value from -1 to 1, or how far a button is pressed from 0 to 1.
 
 
-### .getButtonNames
-
-```js
-getButtonNames(): Iterable<string>
-```
-
-Names of the device's buttons.
-
-
-### .getAxisNames
-
-```js
-getAxisNames(): Iterable<string>
-```
-
-Names of the device's axes.
-
-
 ## GamepadController
 
 _extends [`Controller`](#controller)_
 
-A gamepad, with buttons and axes named by position, like `south` and `left-x`. See the README for
-the full list.
+A gamepad, with buttons and axes named by position. Buttons are `south`, `east`, `west`, `north`,
+`left-bumper`, `right-bumper`, `left-trigger`, `right-trigger`, `select`, `start`, `left-stick`,
+`right-stick`, `dpad-up`, `dpad-down`, `dpad-left`, `dpad-right` and `home`, plus each stick
+direction, like `left-stick-up`. Axes are `left-x`, `left-y`, `right-x` and `right-y`. Gamepads
+without the `'standard'` mapping get `button-0`, `axis-0` and so on.
 
 
 ### events
@@ -304,13 +272,31 @@ slot: number
 The controller's slot in the manager, or -1 once removed by `reassignSlots`.
 
 
-### .features
+### .mapping
 
 ```js
-features: GamepadFeatures
+mapping: string
 ```
 
-What the connected gamepad exposes.
+The browser's mapping: `'standard'`, or `''` when the controller isn't recognized.
+
+
+### .hasRumble
+
+```js
+hasRumble: boolean
+```
+
+Whether `rumble` supports `'dual-rumble'`.
+
+
+### .hasTriggerRumble
+
+```js
+hasTriggerRumble: boolean
+```
+
+Whether `rumble` supports `'trigger-rumble'`.
 
 
 ### .deadZone
@@ -335,19 +321,19 @@ unknown brands.
 ### .rumble
 
 ```js
-rumble( type: string, params: Object ): Promise<string> | null
+rumble( type: string, params: Object ): Promise<string>
 ```
 
-Plays a rumble effect through `vibrationActuator.playEffect`. Returns null if unsupported.
+Plays a rumble effect through `vibrationActuator.playEffect`. Check `hasRumble` first.
 
 
 ### .stopRumble
 
 ```js
-stopRumble(): Promise<string> | null
+stopRumble(): Promise<string>
 ```
 
-Stops the current rumble effect. Returns null if unsupported.
+Stops the current rumble effect.
 
 
 ## KeyboardController
@@ -390,46 +376,3 @@ getButtonName( name: string ): string
 
 The button's printed name, e.g. `'Left Click'`.
 
-
-## GamepadFeatures
-
-
-### .mapping
-
-```js
-mapping: string
-```
-
-`'standard'`, or `''` when the controller isn't recognized.
-
-### .buttons
-
-```js
-buttons: number
-```
-
-Number of buttons.
-
-### .axes
-
-```js
-axes: number
-```
-
-Number of axes.
-
-### .rumble
-
-```js
-rumble: boolean
-```
-
-Whether `'dual-rumble'` is supported.
-
-### .triggerRumble
-
-```js
-triggerRumble: boolean
-```
-
-Whether `'trigger-rumble'` is supported.

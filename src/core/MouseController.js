@@ -25,7 +25,11 @@ export class MouseController extends Controller {
 
 		this._down = new Set();
 		this._tapped = new Set();
-		for ( const name of MOUSE_BUTTONS ) this._getButton( name );
+		for ( const name of MOUSE_BUTTONS ) {
+
+			this._getButton( name );
+
+		}
 
 		// latest pointer position, and the one read at the last update
 		this._clientX = 0;
@@ -36,7 +40,12 @@ export class MouseController extends Controller {
 		this._onMouseDown = e => {
 
 			const name = MOUSE_BUTTONS[ e.button ];
-			if ( ! name ) return;
+			if ( ! name ) {
+
+				return;
+
+			}
+
 			this._down.add( name );
 			this._tapped.add( name );
 
@@ -94,8 +103,11 @@ export class MouseController extends Controller {
 
 	/**
 	 * @private
+	 * @returns {boolean} Whether a button was pressed or the mouse moved.
 	 */
 	update() {
+
+		this._used = false;
 
 		const { _down, _tapped } = this;
 		for ( let i = 0, l = MOUSE_BUTTONS.length; i < l; i ++ ) {
@@ -107,9 +119,15 @@ export class MouseController extends Controller {
 
 		_tapped.clear();
 
-		if ( this._x !== this._clientX || this._y !== this._clientY ) this._active = true;
+		if ( this._x !== this._clientX || this._y !== this._clientY ) {
+
+			this._used = true;
+
+		}
+
 		this._x = this._clientX;
 		this._y = this._clientY;
+		return this._used;
 
 	}
 

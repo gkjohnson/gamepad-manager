@@ -1,54 +1,20 @@
-/** @import { Controller } from '../Controller.js' */
-import { Box3, Group, Vector3 } from 'three';
+/** @import { Controller } from '../core/Controller.js' */
+import { Group, Vector3 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
-// how far parts move or rotate when fully pressed
+// how far parts move or turn when fully pressed
 const PRESS_DEPTH = 0.006;
 const STICK_ANGLE = 0.35;
 const TRIGGER_ANGLE = 0.3;
 
-// directions buttons and bumpers move when pressed
-const PRESS = new Vector3( 0, - 1, 0 );
-const BUMPER = new Vector3( 0, 0, 1 );
+// directions in the models, which lie face up with the sticks along +y and the top edge toward -z
+const IN = /* @__PURE__ */ new Vector3( 0, - 1, 0 );
+const DOWN = /* @__PURE__ */ new Vector3( 0, 0, 1 );
+const LEFT = /* @__PURE__ */ new Vector3( - 1, 0, 0 );
 
-// controller button names and the model parts they press
-const BUTTONS = [
-	[ 'south', 'button_south' ],
-	[ 'east', 'button_east' ],
-	[ 'west', 'button_west' ],
-	[ 'north', 'button_north' ],
-	[ 'select', 'button_select' ],
-	[ 'start', 'button_start' ],
-	[ 'home', 'button_home' ],
-	[ 'left-stick', 'stick_left' ],
-	[ 'right-stick', 'stick_right' ],
-	[ 'left-bumper', 'bumper_left' ],
-	[ 'right-bumper', 'bumper_right' ],
-	[ 'left-trigger', 'trigger_left' ],
-	[ 'right-trigger', 'trigger_right' ],
-	[ 'dpad-up', 'dpad_up' ],
-	[ 'dpad-down', 'dpad_down' ],
-	[ 'dpad-left', 'dpad_left' ],
-	[ 'dpad-right', 'dpad_right' ],
-];
-
-// stick axes, their stick part and the button that presses it
-const STICKS = [
-	{ x: 'left-x', y: 'left-y', part: 'stick_left', button: 'left-stick' },
-	{ x: 'right-x', y: 'right-y', part: 'stick_right', button: 'right-stick' },
-];
-
-const TRIGGERS = [
-	[ 'left-trigger', 'trigger_left' ],
-	[ 'right-trigger', 'trigger_right' ],
-];
-
-const _box = new Box3();
-const _hinge = new Vector3();
-const _force = new Vector3();
-const _torque = new Vector3();
-const _rotation = new Vector3();
-const _axis = new Vector3();
+const _rotation = /* @__PURE__ */ new Vector3();
+const _force = /* @__PURE__ */ new Vector3();
+const _torque = /* @__PURE__ */ new Vector3();
 
 /**
  * Base class for the 3D controller models.
@@ -64,101 +30,64 @@ export class ControllerModel extends Group {
 
 		super();
 
+		// each button's part, its rest position, the direction it pushes on the controller and how
+		// far it's pressed, and each axis's value
+		this._buttons = {};
+		this._axes = { 'left-x': 0, 'left-y': 0, 'right-x': 0, 'right-y': 0 };
+		this._disposed = false;
+
 		/**
 		 * Resolves once the model has loaded.
 		 * @type {Promise<void>}
 		 */
-		this.loaded = new GLTFLoader().loadAsync( url.toString() ).then( gltf => {
+		this.loaded = new GLTFLoader().loadAsync( url.toString() ).then( ( { scene } ) => {
 
+			this.add( scene );
+			this._initParts( scene );
 			if ( this._disposed ) {
 
-				disposeObject( gltf.scene );
-
-			} else {
-
-				this._initParts( gltf.scene );
+				this.dispose();
 
 			}
 
 		} );
 
-		this._disposed = false;
-
-		// direction a pulled trigger tips the controller, set by each subclass
-		this._triggerDirection = new Vector3( 0, 1, 0 );
-
-		this._values = {};
-		this._buttons = [];
-		this._sticks = [];
-		this._triggers = [];
-		this._right = new Vector3( 1, 0, 0 );
-		this._left = new Vector3( - 1, 0, 0 );
-		this._down = new Vector3().crossVectors( PRESS, this._right );
-
 	}
 
-	// finds the loaded model's moving parts and adds it
 	_initParts( scene ) {
 
-		// sticks tilt about their origin
-		const pivots = {};
-		for ( const { x, y, part: partName, button } of STICKS ) {
+		// each button moves the model part of the same name
+		const names = [
+			'south', 'east', 'west', 'north', 'select', 'start', 'home',
+			'left-stick', 'right-stick', 'left-bumper', 'right-bumper', 'left-trigger', 'right-trigger',
+			'dpad-up', 'dpad-down', 'dpad-left', 'dpad-right',
+		];
 
-			const stick = scene.getObjectByName( partName );
-			if ( ! stick ) continue;
+		for ( const name of names ) {
 
-			pivots[ button ] = stick;
-			this._sticks.push( { x, y, pivot: stick, rest: stick.position.clone() } );
+			const object = scene.getObjectByName( name );
+			if ( ! object ) {
 
-		}
-
-		// triggers swing about a hinge along their top front edge
-		scene.updateMatrixWorld( true );
-		for ( const [ name, partName ] of TRIGGERS ) {
-
-			const triggerPart = scene.getObjectByName( partName );
-			if ( ! triggerPart ) continue;
-
-			_box.setFromObject( triggerPart );
-			_hinge.set( ( _box.min.x + _box.max.x ) / 2, _box.max.y, _box.min.z );
-			triggerPart.parent.worldToLocal( _hinge );
-
-			const pivot = new Group();
-			pivot.position.copy( _hinge );
-			triggerPart.parent.add( pivot );
-			pivot.add( triggerPart );
-			triggerPart.position.sub( pivot.position );
-
-			pivots[ name ] = pivot;
-			this._triggers.push( { name, pivot } );
-
-		}
-
-		// each button's part, rest position and press motion
-		for ( const [ name, partName ] of BUTTONS ) {
-
-			const part = pivots[ name ] || scene.getObjectByName( partName );
-			if ( ! part ) continue;
-
-			let direction = PRESS;
-			let depth = PRESS_DEPTH;
-			if ( /trigger/.test( name ) ) {
-
-				direction = this._triggerDirection;
-				depth = 0;
-
-			} else if ( /bumper/.test( name ) ) {
-
-				direction = BUMPER;
+				continue;
 
 			}
 
-			this._values[ name ] = 0;
-			this._buttons.push( { name, part, rest: part.position.clone(), direction, depth } );
+			// bumpers press toward the bottom edge and the rest into the face; how a pulled trigger pushes
+			// differs per model, so each model sets its triggers' direction
+			let direction = IN;
+			if ( name === 'left-bumper' || name === 'right-bumper' ) {
+
+				direction = DOWN;
+
+			} else if ( name === 'left-trigger' || name === 'right-trigger' ) {
+
+				direction = null;
+
+			}
+
+			this._buttons[ name ] = { object, rest: object.position.clone(), direction, value: 0 };
 
 		}
-
-		this.add( scene );
 
 	}
 
@@ -169,28 +98,17 @@ export class ControllerModel extends Group {
 	 */
 	setButton( name, value ) {
 
-		this._values[ name ] = value;
+		const button = this._buttons[ name ];
 
-		const buttons = this._buttons;
-		for ( let i = 0, l = buttons.length; i < l; i ++ ) {
+		button.value = value;
+		if ( name === 'left-trigger' || name === 'right-trigger' ) {
 
-			const { name: buttonName, part, rest, direction, depth } = buttons[ i ];
-			if ( buttonName === name ) {
+			// triggers turn about their hinge, the origin of their node
+			button.object.quaternion.setFromAxisAngle( LEFT, value * TRIGGER_ANGLE );
 
-				part.position.copy( rest ).addScaledVector( direction, value * depth );
+		} else {
 
-			}
-
-		}
-
-		const triggers = this._triggers;
-		for ( let i = 0, l = triggers.length; i < l; i ++ ) {
-
-			if ( triggers[ i ].name === name ) {
-
-				triggers[ i ].pivot.quaternion.setFromAxisAngle( this._left, value * TRIGGER_ANGLE );
-
-			}
+			button.object.position.copy( button.rest ).addScaledVector( button.direction, value * PRESS_DEPTH );
 
 		}
 
@@ -203,21 +121,19 @@ export class ControllerModel extends Group {
 	 */
 	setAxis( name, value ) {
 
-		this._values[ name ] = value;
+		const axes = this._axes;
+		const buttons = this._buttons;
+		axes[ name ] = value;
 
-		const sticks = this._sticks;
-		for ( let i = 0, l = sticks.length; i < l; i ++ ) {
+		// sticks tilt about their origin, the center of the ball at their base: pushing up or down turns
+		// them about x, left or right about z
+		_rotation.set( axes[ 'left-y' ], 0, - axes[ 'left-x' ] );
+		let length = _rotation.length();
+		buttons[ 'left-stick' ].object.quaternion.setFromAxisAngle( _rotation.normalize(), length * STICK_ANGLE );
 
-			const { x, y, pivot } = sticks[ i ];
-			if ( name === x || name === y ) {
-
-				_rotation.copy( this._right ).multiplyScalar( this._values[ y ] || 0 );
-				_rotation.addScaledVector( this._down, - ( this._values[ x ] || 0 ) );
-				this._rotatePart( pivot, _rotation, STICK_ANGLE );
-
-			}
-
-		}
+		_rotation.set( axes[ 'right-y' ], 0, - axes[ 'right-x' ] );
+		length = _rotation.length();
+		buttons[ 'right-stick' ].object.quaternion.setFromAxisAngle( _rotation.normalize(), length * STICK_ANGLE );
 
 	}
 
@@ -227,18 +143,15 @@ export class ControllerModel extends Group {
 	 */
 	setFromController( controller ) {
 
-		for ( let i = 0, l = BUTTONS.length; i < l; i ++ ) {
+		for ( const name in this._buttons ) {
 
-			const name = BUTTONS[ i ][ 0 ];
 			this.setButton( name, controller.getAxis( name ) );
 
 		}
 
-		for ( let i = 0, l = STICKS.length; i < l; i ++ ) {
+		for ( const name in this._axes ) {
 
-			const { x, y } = STICKS[ i ];
-			this.setAxis( x, controller.getAxis( x ) );
-			this.setAxis( y, controller.getAxis( y ) );
+			this.setAxis( name, controller.getAxis( name ) );
 
 		}
 
@@ -251,24 +164,25 @@ export class ControllerModel extends Group {
 	 */
 	getTilt( target ) {
 
+		const axes = this._axes;
+		const buttons = this._buttons;
 		target.set( 0, 0, 0 );
 
-		const buttons = this._buttons;
-		for ( let i = 0, l = buttons.length; i < l; i ++ ) {
+		// each press pushes on the controller at its part
+		for ( const name in buttons ) {
 
-			const { name, rest, direction } = buttons[ i ];
-			addTorque( target, rest, direction, this._values[ name ] );
-
-		}
-
-		const sticks = this._sticks;
-		for ( let i = 0, l = sticks.length; i < l; i ++ ) {
-
-			const { x, y, rest } = sticks[ i ];
-			addTorque( target, rest, this._right, this._values[ x ] || 0 );
-			addTorque( target, rest, this._down, this._values[ y ] || 0 );
+			const { rest, direction, value } = buttons[ name ];
+			_force.copy( direction ).multiplyScalar( value );
+			target.add( _torque.crossVectors( rest, _force ) );
 
 		}
+
+		// and each stick pushes the way it's tilted
+		_force.set( axes[ 'left-x' ], 0, axes[ 'left-y' ] );
+		target.add( _torque.crossVectors( buttons[ 'left-stick' ].rest, _force ) );
+
+		_force.set( axes[ 'right-x' ], 0, axes[ 'right-y' ] );
+		target.add( _torque.crossVectors( buttons[ 'right-stick' ].rest, _force ) );
 
 		return target;
 
@@ -280,66 +194,21 @@ export class ControllerModel extends Group {
 	dispose() {
 
 		this._disposed = true;
-		disposeObject( this );
+		this.traverse( object => {
 
-	}
+			if ( object.isMesh ) {
 
-	// rotates a part about "rotation" by its length times "scale"
-	_rotatePart( object, rotation, scale ) {
+				const { geometry, material } = object;
+				geometry.dispose();
+				material.dispose();
 
-		const angle = rotation.length() * scale;
-		if ( angle > 0 ) {
+				// the material's textures, whose images are decoded bitmaps
+				for ( const key in material ) {
 
-			object.quaternion.setFromAxisAngle( _axis.copy( rotation ).normalize(), angle );
+					const value = material[ key ];
+					if ( value && value.isTexture ) {
 
-		} else {
-
-			object.quaternion.identity();
-
-		}
-
-	}
-
-}
-
-// adds the turning force of pushing at "position" along "direction"
-function addTorque( target, position, direction, amount ) {
-
-	if ( amount === 0 ) return;
-	_force.copy( direction ).multiplyScalar( amount );
-	_torque.crossVectors( position, _force );
-	target.add( _torque );
-
-}
-
-// frees the geometry, materials and textures of an object and its children
-function disposeObject( root ) {
-
-	root.traverse( object => {
-
-		if ( object.geometry ) {
-
-			object.geometry.dispose();
-
-		}
-
-		if ( ! object.material ) {
-
-			return;
-
-		}
-
-		const materials = Array.isArray( object.material ) ? object.material : [ object.material ];
-		for ( const material of materials ) {
-
-			for ( const key in material ) {
-
-				const value = material[ key ];
-				if ( value && value.isTexture ) {
-
-					value.dispose();
-					if ( value.image instanceof ImageBitmap ) {
-
+						value.dispose();
 						value.image.close();
 
 					}
@@ -348,10 +217,8 @@ function disposeObject( root ) {
 
 			}
 
-			material.dispose();
+		} );
 
-		}
-
-	} );
+	}
 
 }

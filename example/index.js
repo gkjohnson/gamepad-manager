@@ -11,7 +11,7 @@ import {
 	WebGLRenderer,
 } from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { ControllerManager } from '../src/index.js';
+import { ControllerManager } from '../src/core/index.js';
 import { DualShockControllerModel, XboxControllerModel } from '../src/three/index.js';
 
 // the model shown for each controller brand, with the Xbox model for anything else, and how far to
@@ -113,7 +113,11 @@ function addDisplay( controller, brand ) {
 	if ( controller ) {
 
 		index = displays.findIndex( d => ! d.controller || d.controller.slot > controller.slot );
-		if ( index === - 1 ) index = displays.length;
+		if ( index === - 1 ) {
+
+			index = displays.length;
+
+		}
 
 	}
 
@@ -158,7 +162,16 @@ function hideDisplay( display ) {
 function countShown() {
 
 	let count = 0;
-	for ( let i = 0, l = displays.length; i < l; i ++ ) if ( displays[ i ].shown ) count ++;
+	for ( let i = 0, l = displays.length; i < l; i ++ ) {
+
+		if ( displays[ i ].shown ) {
+
+			count ++;
+
+		}
+
+	}
+
 	return count;
 
 }
@@ -167,7 +180,12 @@ function countShown() {
 function freeSwayIndex() {
 
 	let index = 0;
-	while ( displays.some( d => d.shown && d.swayIndex === index ) ) index ++;
+	while ( displays.some( d => d.shown && d.swayIndex === index ) ) {
+
+		index ++;
+
+	}
+
 	return index;
 
 }
@@ -177,7 +195,11 @@ function lastDummy() {
 
 	for ( let i = displays.length - 1; i >= 0; i -- ) {
 
-		if ( ! displays[ i ].controller && displays[ i ].shown ) return displays[ i ];
+		if ( ! displays[ i ].controller && displays[ i ].shown ) {
+
+			return displays[ i ];
+
+		}
 
 	}
 
@@ -195,7 +217,12 @@ manager.addEventListener( 'connected', e => {
 	if ( countShown() >= MAX_SHOWN ) {
 
 		const dummy = lastDummy();
-		if ( ! dummy ) return;
+		if ( ! dummy ) {
+
+			return;
+
+		}
+
 		hideDisplay( dummy );
 
 	}
@@ -209,14 +236,22 @@ manager.addEventListener( 'connected', e => {
 const PRESS_RUMBLE = { duration: 60, strongMagnitude: 0.3, weakMagnitude: 0.6 };
 function onGamepadPressed( e ) {
 
-	e.target.rumble( 'dual-rumble', PRESS_RUMBLE );
+	if ( e.target.hasRumble ) {
+
+		e.target.rumble( 'dual-rumble', PRESS_RUMBLE );
+
+	}
 
 }
 
 manager.addEventListener( 'disconnected', e => {
 
 	const display = displays.find( d => d.controller === e.controller && d.shown );
-	if ( display ) hideDisplay( display );
+	if ( display ) {
+
+		hideDisplay( display );
+
+	}
 
 } );
 
@@ -231,7 +266,11 @@ manager.getKeyboard().addEventListener( 'pressed', e => {
 	} else if ( e.name === 'ArrowDown' ) {
 
 		const dummy = lastDummy();
-		if ( dummy ) hideDisplay( dummy );
+		if ( dummy ) {
+
+			hideDisplay( dummy );
+
+		}
 
 	}
 
@@ -254,7 +293,11 @@ function animate( timestamp ) {
 	stage.scale.setScalar( stageScale.value );
 
 	// backwards, since displays that have slid out are removed
-	for ( let i = displays.length - 1; i >= 0; i -- ) updateDisplay( displays[ i ], time, delta );
+	for ( let i = displays.length - 1; i >= 0; i -- ) {
+
+		updateDisplay( displays[ i ], time, delta );
+
+	}
 
 	const shownCount = countShown();
 	if ( shownCount !== lastShownCount ) {
@@ -281,7 +324,12 @@ function layout() {
 	for ( let i = 0, l = displays.length; i < l; i ++ ) {
 
 		const display = displays[ i ];
-		if ( ! display.shown ) continue;
+		if ( ! display.shown ) {
+
+			continue;
+
+		}
+
 
 		// an odd one out in the last row is centered
 		const row = Math.floor( index / columns );
@@ -298,7 +346,12 @@ function layout() {
 
 		} else {
 
-			while ( isGamepadPlayer( dummyPlayer ) ) dummyPlayer ++;
+			while ( isGamepadPlayer( dummyPlayer ) ) {
+
+				dummyPlayer ++;
+
+			}
+
 			display.player = dummyPlayer ++;
 
 		}
@@ -319,7 +372,11 @@ function isGamepadPlayer( player ) {
 	for ( let i = 0, l = displays.length; i < l; i ++ ) {
 
 		const display = displays[ i ];
-		if ( display.shown && display.controller && display.player === player ) return true;
+		if ( display.shown && display.controller && display.player === player ) {
+
+			return true;
+
+		}
 
 	}
 
@@ -335,7 +392,7 @@ function updateDisplay( display, time, delta ) {
 	smoothDamp( display.x, display.x.target, LAYOUT_TIME, delta );
 	smoothDamp( display.y, display.y.target, LAYOUT_TIME, delta );
 
-	if ( controller ) {
+	if ( display.loaded && controller ) {
 
 		// show the gamepad, which reads as released once disconnected
 		model.setFromController( controller );
@@ -343,7 +400,11 @@ function updateDisplay( display, time, delta ) {
 		// note when the bumpers or triggers were last in use
 		for ( let i = 0, l = SHOULDER_BUTTONS.length; i < l; i ++ ) {
 
-			if ( controller.getAxis( SHOULDER_BUTTONS[ i ] ) > 0.05 ) display.lastShoulderTime = time;
+			if ( controller.getAxis( SHOULDER_BUTTONS[ i ] ) > 0.05 ) {
+
+				display.lastShoulderTime = time;
+
+			}
 
 		}
 
@@ -372,7 +433,11 @@ function updateDisplay( display, time, delta ) {
 	// speed, and is removed once gone
 	if ( display.shown ) {
 
-		if ( display.loaded ) smoothDamp( slide, 0, SLIDE_TIME, delta );
+		if ( display.loaded ) {
+
+			smoothDamp( slide, 0, SLIDE_TIME, delta );
+
+		}
 
 	} else {
 

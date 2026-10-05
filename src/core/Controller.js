@@ -52,8 +52,8 @@ export class Controller extends EventDispatcher {
 		this._axes = new Map();
 		this._event = { type: '', name: '', target: null };
 
-		// whether the device was used in the last update
-		this._active = false;
+		// whether a button was pressed or an axis moved since the update started
+		this._used = false;
 
 	}
 
@@ -112,7 +112,11 @@ export class Controller extends EventDispatcher {
 	getAxis( name ) {
 
 		const axis = this._axes.get( name );
-		if ( axis !== undefined ) return axis;
+		if ( axis !== undefined ) {
+
+			return axis;
+
+		}
 
 		const button = this._buttons.get( name );
 		return button ? button.value : 0;
@@ -120,30 +124,15 @@ export class Controller extends EventDispatcher {
 	}
 
 	/**
-	 * Names of the device's buttons.
-	 * @returns {Iterable<string>}
-	 */
-	getButtonNames() {
-
-		return this._buttons.keys();
-
-	}
-
-	/**
-	 * Names of the device's axes.
-	 * @returns {Iterable<string>}
-	 */
-	getAxisNames() {
-
-		return this._axes.keys();
-
-	}
-
-	/**
 	 * Reads the device's latest state.
 	 * @private
+	 * @returns {boolean} Whether a button was pressed or an axis moved.
 	 */
-	update() {}
+	update() {
+
+		return false;
+
+	}
 
 	_getButton( name ) {
 
@@ -170,18 +159,27 @@ export class Controller extends EventDispatcher {
 
 		if ( button.pressed ) {
 
-			this._active = true;
+			this._used = true;
 			this._dispatch( 'pressed', name );
 
 		}
 
-		if ( button.released ) this._dispatch( 'released', name );
+		if ( button.released ) {
+
+			this._dispatch( 'released', name );
+
+		}
 
 	}
 
 	_setAxis( name, value ) {
 
-		if ( value !== 0 && value !== this._axes.get( name ) ) this._active = true;
+		if ( value !== 0 && value !== this._axes.get( name ) ) {
+
+			this._used = true;
+
+		}
+
 		this._axes.set( name, value );
 
 	}
@@ -189,8 +187,17 @@ export class Controller extends EventDispatcher {
 	// releases every button and centers every axis
 	_releaseAll() {
 
-		for ( const name of this._buttons.keys() ) this._setButton( name, 0 );
-		for ( const name of this._axes.keys() ) this._setAxis( name, 0 );
+		for ( const name of this._buttons.keys() ) {
+
+			this._setButton( name, 0 );
+
+		}
+
+		for ( const name of this._axes.keys() ) {
+
+			this._setAxis( name, 0 );
+
+		}
 
 	}
 

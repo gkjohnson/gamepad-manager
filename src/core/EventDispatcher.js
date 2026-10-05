@@ -11,7 +11,11 @@ export class EventDispatcher {
 	 */
 	addEventListener( type, listener ) {
 
-		if ( this._listeners === undefined ) this._listeners = {};
+		if ( this._listeners === undefined ) {
+
+			this._listeners = {};
+
+		}
 
 		const listeners = this._listeners;
 
@@ -30,22 +34,6 @@ export class EventDispatcher {
 	}
 
 	/**
-	 * Whether the listener is registered for this event type.
-	 * @param {string} type
-	 * @param {Function} listener
-	 * @returns {boolean}
-	 */
-	hasEventListener( type, listener ) {
-
-		const listeners = this._listeners;
-
-		if ( listeners === undefined ) return false;
-
-		return listeners[ type ] !== undefined && listeners[ type ].indexOf( listener ) !== - 1;
-
-	}
-
-	/**
 	 * Removes a listener.
 	 * @param {string} type
 	 * @param {Function} listener
@@ -54,7 +42,11 @@ export class EventDispatcher {
 
 		const listeners = this._listeners;
 
-		if ( listeners === undefined ) return;
+		if ( listeners === undefined ) {
+
+			return;
+
+		}
 
 		const listenerArray = listeners[ type ];
 
@@ -80,7 +72,11 @@ export class EventDispatcher {
 
 		const listeners = this._listeners;
 
-		if ( listeners === undefined ) return;
+		if ( listeners === undefined ) {
+
+			return;
+
+		}
 
 		const listenerArray = listeners[ event.type ];
 

@@ -2,8 +2,7 @@ export default [
 	{
 		output: './API.md',
 		title: 'gamepad-manager',
-		source: './src',
-		exclude: './src/three',
+		source: './src/core',
 	},
 	{
 		output: './THREE_API.md',

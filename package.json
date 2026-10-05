@@ -4,10 +4,10 @@
 	"description": "Gamepad, keyboard and mouse input for the browser.",
 	"type": "module",
 	"sideEffects": false,
-	"main": "src/index.js",
-	"module": "src/index.js",
+	"main": "src/core/index.js",
+	"module": "src/core/index.js",
 	"exports": {
-		".": "./src/index.js",
+		".": "./src/core/index.js",
 		"./three": "./src/three/index.js"
 	},
 	"files": [

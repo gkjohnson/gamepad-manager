@@ -1,16 +1,30 @@
 # gamepad-manager
 
-Gamepad, keyboard and mouse input for browser games, with one query and event API across devices.
+[![build](https://img.shields.io/github/actions/workflow/status/gkjohnson/gamepad-manager/node.js.yml?style=flat-square&label=build&branch=main)](https://github.com/gkjohnson/gamepad-manager/actions)
+[![github](https://flat.badgen.net/badge/icon/github?icon=github&label)](https://github.com/gkjohnson/gamepad-manager/)
+[![twitter](https://flat.badgen.net/badge/twitter/@garrettkjohnson/?icon&label)](https://twitter.com/garrettkjohnson)
+[![sponsors](https://img.shields.io/github/sponsors/gkjohnson?style=flat-square&color=1da1f2)](https://github.com/sponsors/gkjohnson/)
 
-- Gamepads stay in stable slots as controllers connect and disconnect, until reassigned to fill the slots from 0.
-- Buttons are named by position (`south`, `left-trigger`, ...), the same on Xbox, PlayStation and Switch controllers.
-- Radial stick dead zones, and press and release thresholds so analog triggers don't flicker.
-- Query state each frame or listen for `pressed` / `released` events, with no allocations per frame.
-- Optional three.js controller models whose buttons and sticks move with a controller's state.
+Gamepad, keyboard and mouse input for browser games with one query and event API, gamepads kept in stable slots, and optional three.js controller models.
+
+> [!NOTE]
+> This project is not hosted on npm and must be installed via Github repository.
 
 # Examples
 
-`example/` shows a controller model for each connected gamepad, up to four, its buttons, triggers and sticks following the gamepad and tilting it slightly as they're pushed. The up and down arrow keys add and remove dummy controllers.
+[Controller viewer](https://gkjohnson.github.io/gamepad-manager/index.html)
+
+# Installation
+
+```
+npm install github:@gkjohnson/gamepad-manager
+```
+
+# API
+
+See [API.md](./API.md) for full API documentation.
+
+See [THREE_API.md](./THREE_API.md) for the three.js controller models.
 
 # Use
 
@@ -18,28 +32,19 @@ Gamepad, keyboard and mouse input for browser games, with one query and event AP
 import { ControllerManager } from 'gamepad-manager';
 
 const manager = new ControllerManager();
-manager.addEventListener( 'connected', e => console.log( `${ e.controller.id } in slot ${ e.slot }` ) );
-
-const keyboard = manager.getKeyboard();
-keyboard.addEventListener( 'pressed', e => console.log( e.name ) );
-
-// slot 0's controller exists before a gamepad connects, so listeners can be added up front
 const pad = manager.getController( 0 );
-pad.addEventListener( 'pressed', e => console.log( e.name ) );
 
 function frame() {
 
 	manager.update();
 
-	if ( pad.connected ) {
+	if ( pad.getButtonPressed( 'south' ) ) {
 
-		if ( pad.getButtonPressed( 'south' ) ) jump();
-		move( pad.getAxis( 'left-x' ), pad.getAxis( 'left-y' ) );
+		jump();
 
 	}
 
-	if ( keyboard.getButtonHeld( 'Space' ) ) jump();
-
+	move( pad.getAxis( 'left-x' ), pad.getAxis( 'left-y' ) );
 	requestAnimationFrame( frame );
 
 }
@@ -47,60 +52,10 @@ function frame() {
 frame();
 ```
 
-## Button names
+# Model License Information
 
-Gamepads with the browser's `'standard'` mapping, with the printed names `getButtonName` returns for each brand (Xbox's for unknown brands):
+Controller models are licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) and have been modified.
 
-| Name | Xbox | PlayStation | Nintendo |
-|---|---|---|---|
-| `south` | A | Cross | B |
-| `east` | B | Circle | A |
-| `west` | X | Square | Y |
-| `north` | Y | Triangle | X |
-| `left-bumper`, `right-bumper` | LB, RB | L1, R1 | L, R |
-| `left-trigger`, `right-trigger` | LT, RT | L2, R2 | ZL, ZR |
-| `select`, `start` | View, Menu | Create, Options | -, + |
-| `left-stick`, `right-stick` | LS, RS | L3, R3 | L Stick, R Stick |
-| `dpad-up`, `dpad-down`, `dpad-left`, `dpad-right` | D-pad Up, ... | D-pad Up, ... | D-pad Up, ... |
-| `home` | Guide | PS | Home |
+[Xbox Controller](https://sketchfab.com/3d-models/xbox-inalambric-controller-white-f18a70fc10414ef5a39b55de68f12823) by [Chistodrako._.](https://sketchfab.com/oscar.lopez.riviello)
 
-Axes are `left-x`, `left-y`, `right-x` and `right-y`, from -1 to 1. Each stick direction is also a button, `left-stick-up`, `left-stick-down`, `left-stick-left`, `left-stick-right` and the same for `right-stick`, held when pushed past halfway. Unrecognized controllers get `button-0`, `axis-0`, `axis-0-negative`, `axis-0-positive` and so on.
-
-The keyboard uses `KeyboardEvent.code` names (`KeyW`, `Space`, `ArrowUp`), and the mouse `left`, `middle`, `right`, `back` and `forward`. `getMouse().getPosition( target )` gives the mouse position in CSS pixels.
-
-Every device has `getButtonName( name )` for on-screen prompts: `'A'` or `'Cross'` for a gamepad's `south`, `'W'` for `KeyW` (following the user's layout where the browser exposes it), `'Left Click'` for the mouse's `left`. `manager.lastActive` is the device last used, to pick which prompts to show.
-
-## Controller models
-
-`gamepad-manager/three` has three.js models that show a controller's state. Each loads its own model file, shipped in the package and found with `new URL( ..., import.meta.url )`, which works in browsers, Vite and webpack; Rollup needs a plugin for it. A gamepad's `brand` (`'xbox'`, `'playstation'`, `'nintendo'` or `''`) picks the one to show:
-
-```js
-import { DualShockControllerModel, XboxControllerModel } from 'gamepad-manager/three';
-
-const model = pad.brand === 'playstation' ? new DualShockControllerModel() : new XboxControllerModel();
-scene.add( model );
-await model.loaded;
-
-// each frame
-model.setFromController( pad );
-```
-
-# API
-
-See [API.md](./API.md), and [THREE_API.md](./THREE_API.md) for the models.
-
-# Development
-
-```bash
-npm install
-npm start
-```
-
-`npm start` serves the pages in `example/`, and `npm run lint` checks the code. `API.md` and `THREE_API.md` are generated from the JSDoc with [jsdoc2md](https://github.com/gkjohnson/jsdoc2md) and the settings in `jsdoc2md.config.js`.
-
-# Credits
-
-Controller models in `src/three/models/`, both [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) and modified (split into separate parts and compressed):
-
-- `xbox-controller.glb`: [Xbox Inalambric Controller (White)](https://sketchfab.com/3d-models/xbox-inalambric-controller-white-f18a70fc10414ef5a39b55de68f12823) by [Chistodrako._.](https://sketchfab.com/oscar.lopez.riviello)
-- `dualshock-controller.glb`: [DualShock 4 PlayStation Controller](https://sketchfab.com/3d-models/dualshock-4-playstation-controller-e3c2f0dc16524fc19cdde45bad1de1a9) by [shaielwolf](https://sketchfab.com/shaielwolf)
+[DualShock 4 Controller](https://sketchfab.com/3d-models/dualshock-4-playstation-controller-e3c2f0dc16524fc19cdde45bad1de1a9) by [shaielwolf](https://sketchfab.com/shaielwolf)

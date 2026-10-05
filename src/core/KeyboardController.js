@@ -1,27 +1,5 @@
 import { Controller } from './Controller.js';
 
-// printed names the general rule in getButtonName gets wrong, on a US layout
-const KEY_NAMES = {
-	Backquote: '`',
-	Minus: '-',
-	Equal: '=',
-	BracketLeft: '[',
-	BracketRight: ']',
-	Backslash: '\\',
-	Semicolon: ';',
-	Quote: '\'',
-	Comma: ',',
-	Period: '.',
-	Slash: '/',
-	ArrowUp: 'Up',
-	ArrowDown: 'Down',
-	ArrowLeft: 'Left',
-	ArrowRight: 'Right',
-	Escape: 'Esc',
-	ControlLeft: 'Left Ctrl',
-	ControlRight: 'Right Ctrl',
-};
-
 /**
  * The keyboard, with buttons named by `KeyboardEvent.code`, like `KeyW`.
  * @extends Controller
@@ -33,19 +11,18 @@ export class KeyboardController extends Controller {
 		super( 'keyboard' );
 		this.connected = true;
 
+		// keys to read each update: those down, and those just released
 		this._codes = [];
 		this._down = new Set();
 		this._tapped = new Set();
 
-		// cached printed names, and the user's keyboard layout where available
-		this._names = new Map();
+		// the user's keyboard layout, where the browser exposes it
 		this._layoutMap = null;
 		if ( navigator.keyboard && navigator.keyboard.getLayoutMap ) {
 
 			navigator.keyboard.getLayoutMap().then( map => {
 
 				this._layoutMap = map;
-				this._names.clear();
 
 			} ).catch( () => {} );
 
@@ -53,10 +30,14 @@ export class KeyboardController extends Controller {
 
 		this._onKeyDown = e => {
 
-			if ( e.repeat ) return;
-			if ( ! this._buttons.has( e.code ) ) {
+			if ( e.repeat ) {
 
-				this._getButton( e.code );
+				return;
+
+			}
+
+			if ( ! this._codes.includes( e.code ) ) {
+
 				this._codes.push( e.code );
 
 			}
@@ -91,50 +72,51 @@ export class KeyboardController extends Controller {
 	 */
 	getButtonName( name ) {
 
-		let result = this._names.get( name );
-		if ( result === undefined ) {
+		const layoutKey = this._layoutMap && this._layoutMap.get( name );
+		if ( layoutKey ) {
 
-			const layoutKey = this._layoutMap && this._layoutMap.get( name );
-			if ( layoutKey ) {
-
-				result = layoutKey.toUpperCase();
-
-			} else if ( name in KEY_NAMES ) {
-
-				result = KEY_NAMES[ name ];
-
-			} else {
-
-				// "KeyW" to "W", "Digit1" to "1", "ShiftLeft" to "Left Shift", "PageUp" to "Page Up"
-				result = name
-					.replace( /^(Key|Digit)/, '' )
-					.replace( /^(.+)(Left|Right)$/, '$2$1' )
-					.replace( /([a-z])([A-Z0-9])/g, '$1 $2' );
-
-			}
-
-			this._names.set( name, result );
+			return layoutKey.toUpperCase();
 
 		}
 
-		return result;
+		// "KeyW" to "W", "Digit1" to "1", "ArrowUp" to "Up Arrow", "ShiftLeft" to "Left Shift", "PageUp"
+		// to "Page Up"
+		return name
+			.replace( /^(Key|Digit)/, '' )
+			.replace( /^Arrow(.+)$/, '$1Arrow' )
+			.replace( /^(.+)(Left|Right)$/, '$2$1' )
+			.replace( /([a-z])([A-Z0-9])/g, '$1 $2' );
 
 	}
 
 	/**
 	 * @private
+	 * @returns {boolean} Whether a key was pressed.
 	 */
 	update() {
 
+		this._used = false;
+
+		// backwards, so a finished key can be swapped out with the last one
 		const { _codes, _down, _tapped } = this;
-		for ( let i = 0, l = _codes.length; i < l; i ++ ) {
+		for ( let i = _codes.length - 1; i >= 0; i -- ) {
 
 			const code = _codes[ i ];
 			this._setButton( code, _down.has( code ) || _tapped.has( code ) ? 1 : 0 );
 
+			// drop a key once it's up and its release has been reported
+			const button = this._buttons.get( code );
+			if ( ! button.held && ! button.released ) {
+
+				_codes[ i ] = _codes[ _codes.length - 1 ];
+				_codes.pop();
+
+			}
+
 		}
 
 		_tapped.clear();
+		return this._used;
 
 	}
 
