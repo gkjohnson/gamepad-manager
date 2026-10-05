@@ -1,6 +1,7 @@
 # gamepad-manager
 
 [![build](https://img.shields.io/github/actions/workflow/status/gkjohnson/gamepad-manager/node.js.yml?style=flat-square&label=build&branch=main)](https://github.com/gkjohnson/gamepad-manager/actions)
+[![docs](https://img.shields.io/badge/docs-API-blue?style=flat-square)](https://gkjohnson.github.io/tools/docs/gamepad-manager/)
 [![github](https://flat.badgen.net/badge/icon/github?icon=github&label)](https://github.com/gkjohnson/gamepad-manager/)
 [![twitter](https://flat.badgen.net/badge/twitter/@garrettkjohnson/?icon&label)](https://twitter.com/garrettkjohnson)
 [![sponsors](https://img.shields.io/github/sponsors/gkjohnson?style=flat-square&color=1da1f2)](https://github.com/sponsors/gkjohnson/)
@@ -22,9 +23,9 @@ npm install github:@gkjohnson/gamepad-manager
 
 # API
 
-See [API.md](./API.md) for full API documentation.
+See the [docs site](https://gkjohnson.github.io/tools/docs/gamepad-manager/) for full API documentation.
 
-See [THREE_API.md](./THREE_API.md) for the three.js controller models.
+The same documentation is also available as markdown in [API.md](./API.md) and, for the three.js controller models, [THREE_API.md](./THREE_API.md).
 
 # Use
 
