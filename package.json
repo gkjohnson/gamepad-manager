@@ -18,6 +18,21 @@
 		"build-examples": "vite build --config ./vite.config.js",
 		"lint": "eslint ."
 	},
+	"keywords": [
+		"gamepad",
+		"controller",
+		"input",
+		"keyboard",
+		"mouse",
+		"game",
+		"gamedev",
+		"xbox",
+		"playstation",
+		"dualshock",
+		"rumble",
+		"threejs",
+		"three-js"
+	],
 	"author": "Garrett Johnson <garrett.kjohnson@gmail.com>",
 	"license": "MIT",
 	"devDependencies": {
