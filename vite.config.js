@@ -6,7 +6,7 @@ export default {
 	root: './example/',
 	base: '',
 	build: {
-		outDir: './bundle/',
+		outDir: './dist/',
 		rollupOptions: {
 			input: fs
 				.readdirSync( './example/' )
